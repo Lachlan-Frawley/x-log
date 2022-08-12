@@ -35,9 +35,9 @@ namespace XLog
     enum class Severity
     {
         INFO,
-        WARNING2, // For warnings where we don't really need to know the source location (if enabled)
         DEBUG,
         WARNING,
+        WARNING2, // For warnings where we don't really need to know the source location (if enabled)
         ERROR,
         FATAL
     };
@@ -118,11 +118,13 @@ inline std::string get_errno_string()
 #define ERRNO_INFO() LOG_INFO() << ERRNO_STREAM
 #define ERRNO_DEBUG() LOG_DEBUG() << ERRNO_STREAM
 #define ERRNO_WARN() LOG_WARN() << ERRNO_STREAM
+#define ERRNO_WARN2() LOG_WARN2() << ERRNO_STREAM
 #define ERRNO_ERROR() LOG_ERROR() << ERRNO_STREAM
 
 #define ERRNO_INFO_INPLACE(name) LOG_INFO_INPLACE(name) << ERRNO_STREAM
 #define ERRNO_DEBUG_INPLACE(name) LOG_DEBUG_INPLACE(name) << ERRNO_STREAM
 #define ERRNO_WARN_INPLACE(name) LOG_WARN_INPLACE(name) << ERRNO_STREAM
+#define ERRNO_WARN2_INPLACE(name) LOG_WARN2_INPLACE(name) << ERRNO_STREAM
 #define ERRNO_ERROR_INPLACE(name) LOG_ERROR_INPLACE(name) << ERRNO_STREAM
 #endif
 
@@ -166,9 +168,10 @@ namespace XLog
  * This should work with std::error_code & boost::system::error_code
  * TODO - Expand
  */
-#define FATAL(msg) throw fatal_exception(__logger, msg);
+#define FATAL(msg) throw XLog::fatal_exception(__logger, msg);
 #define CODE_FATAL(errc) FATAL(ERRC_MSG(errc))
-#define FATAL_NAMED(name, msg) throw fatal_exception(XLog::GetNamedLogger(name), msg);
+#define FATAL_NAMED(name, msg) throw XLog::fatal_exception(XLog::GetNamedLogger(name), msg);
+
 #define CODE_FATAL_NAMED(name, errc) FATAL_NAMED(name, ERRC_MSG(errc))
 #define FATAL_GLOBAL(msg) FATAL_NAMED("Global", msg)
 #define CODE_FATAL_GLOBAL(errc) FATAL_GLOBAL(ERRC_MSG(errc))
@@ -186,12 +189,12 @@ namespace XLog
 #endif
 
 #ifdef LOGGING_USE_SOURCE_LOCATION
-#define FATAL_FMT(fmt, ...) throw fatal_exception(__logger, std::source_location::current(), fmt, __VA_ARGS__);
-#define FATAL_NAMED_FMT(name, fmt, ...) throw fatal_exception(XLog::GetNamedLogger(name), std::source_location::current(), fmt, __VA_ARGS__);
+#define FATAL_FMT(fmt, ...) throw XLog::fatal_exception(__logger, std::source_location::current(), fmt, __VA_ARGS__);
+#define FATAL_NAMED_FMT(name, fmt, ...) throw XLog::fatal_exception(XLog::GetNamedLogger(name), std::source_location::current(), fmt, __VA_ARGS__);
 #define FATAL_GLOBAL_FMT(fmt, ...) FATAL_NAMED_FMT("Global", std::source_location::current(), fmt, __VA_ARGS__)
 #else
-#define FATAL_FMT(fmt, ...) throw fatal_exception(__logger, fmt, __VA_ARGS__);
-#define FATAL_NAMED_FMT(name, fmt, ...) throw fatal_exception(XLog::GetNamedLogger(name), fmt, __VA_ARGS__);
+#define FATAL_FMT(fmt, ...) throw XLog::fatal_exception(__logger, fmt, __VA_ARGS__);
+#define FATAL_NAMED_FMT(name, fmt, ...) throw XLog::fatal_exception(XLog::GetNamedLogger(name), fmt, __VA_ARGS__);
 #define FATAL_GLOBAL_FMT(fmt, ...) FATAL_NAMED_FMT("Global", fmt, __VA_ARGS__)
 #endif
 

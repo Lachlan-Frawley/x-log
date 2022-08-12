@@ -132,7 +132,7 @@ void XLogFormatters::default_formatter(const boost::log::record_view& rec, boost
             << '[' << channel.get() << "] - ";
 
 #ifdef LOGGING_USE_SOURCE_LOCATION
-    if(severity > XLog::Severity::WARNING2)
+    if(severity > XLog::Severity::INFO && severity != XLog::Severity::WARNING2)
     {
         auto slc = boost::log::extract<std::source_location>("SourceLocation", rec);
         if(slc.empty())
