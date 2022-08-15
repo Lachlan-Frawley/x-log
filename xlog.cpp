@@ -32,7 +32,7 @@ XLog::LoggerType& XLog::GetNamedLogger(const std::string_view channel) noexcept
 
     std::scoped_lock lock(LoggerMutex);
 
-#if CXX_VERSION >= 20L
+#if __cplusplus >= 202003L
     auto found = LoggerList.find(channel);
 #else
     auto found = LoggerList.find(std::string(channel));
