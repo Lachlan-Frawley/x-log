@@ -5,18 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 include(GNUInstallDirs)
 
-include(FetchContent)
-FetchContent_Declare(fmt
-  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG master
-)
-FetchContent_MakeAvailable(fmt)
-
 find_package(Boost REQUIRED COMPONENTS log)
 find_package(Threads REQUIRED)
 
 add_library(xlog xlog.cpp)
-target_link_libraries(xlog Threads::Threads Boost::log fmt::fmt)
+target_link_libraries(xlog Threads::Threads Boost::log)
 configure_file(xlog.pc.in xlog.pc @ONLY)
 set_target_properties(xlog PROPERTIES
     VERSION ${PROJECT_VERSION}
