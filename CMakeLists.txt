@@ -8,8 +8,11 @@ include(GNUInstallDirs)
 find_package(Boost REQUIRED COMPONENTS log)
 find_package(Threads REQUIRED)
 
+find_package(PkgConfig)
+pkg_check_modules(FMT REQUIRED IMPORTED_TARGET fmt)
+
 add_library(xlog xlog.cpp)
-target_link_libraries(xlog Threads::Threads Boost::log)
+target_link_libraries(xlog Threads::Threads Boost::log PkgConfig::FMT)
 configure_file(xlog.pc.in xlog.pc @ONLY)
 set_target_properties(xlog PROPERTIES
     VERSION ${PROJECT_VERSION}
@@ -20,3 +23,6 @@ install(TARGETS xlog
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES ${CMAKE_BINARY_DIR}/xlog.pc
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
+
+add_executable(example example.cpp)
+target_link_libraries(example xlog)
