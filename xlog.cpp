@@ -4,6 +4,18 @@
 #include <mutex>
 
 #include <boost/log/utility/setup.hpp>
+#include <boost/log/expressions/predicates/channel_severity_filter.hpp>
+
+typedef std::unordered_map<std::string, XLog::LoggerType, XLog::StringHash, std::equal_to<>> LoggerMap;
+static std::mutex _LoggerMutex;
+
+LoggerMap& GetLoggerMap() noexcept
+{
+    static LoggerMap map;
+    return map;
+}
+
+#define GET_LOGGER_MAP(varname) std::scoped_lock lock(_LoggerMutex); LoggerMap& varname = GetLoggerMap();
 
 std::string XLog::GetSeverityString(Severity sev) noexcept
 {
@@ -12,11 +24,13 @@ std::string XLog::GetSeverityString(Severity sev) noexcept
         case Severity::INFO:
             return "INFO";
         case Severity::DEBUG:
+        case Severity::DEBUG2:
             return "DEBUG";
         case Severity::WARNING:
         case Severity::WARNING2:
             return "WARNING";
         case Severity::ERROR:
+        case Severity::ERROR2:
             return "ERROR";
         case Severity::FATAL:
             return "FATAL";
@@ -27,10 +41,7 @@ std::string XLog::GetSeverityString(Severity sev) noexcept
 
 XLog::LoggerType& XLog::GetNamedLogger(const std::string_view channel) noexcept
 {
-    static std::mutex LoggerMutex;
-    static std::unordered_map<std::string, XLog::LoggerType, StringHash, std::equal_to<>> LoggerList; // NOLINT(cert-err58-cpp)
-
-    std::scoped_lock lock(LoggerMutex);
+    GET_LOGGER_MAP(LoggerList)
 
 #if __cplusplus >= 202003L
     auto found = LoggerList.find(channel);
@@ -73,6 +84,37 @@ void XLog::InitializeLogging()
 
         boost::log::add_common_attributes();
     }
+}
+
+BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", XLog::Severity)
+BOOST_LOG_ATTRIBUTE_KEYWORD(channel, "Channel", std::string)
+
+typedef boost::log::expressions::channel_severity_filter_actor<std::string, XLog::Severity> min_severity_filter;
+min_severity_filter& get_sev_filter()
+{
+    static min_severity_filter filter = boost::log::expressions::channel_severity_filter(channel, severity);
+    return filter;
+}
+
+void XLog::SetGlobalLoggingLevel(XLog::Severity sev)
+{
+    GET_LOGGER_MAP(all_loggers)
+    min_severity_filter& filter = get_sev_filter();
+
+    for(const auto& [key, value] : all_loggers)
+    {
+        filter[key] = sev;
+    }
+
+    boost::log::core::get()->set_filter(filter);
+}
+
+void XLog::SetLoggingLevel(XLog::Severity sev, std::string_view channel)
+{
+    GET_LOGGER_MAP(all_loggers)
+    min_severity_filter& filter = get_sev_filter();
+    filter[std::string(channel)] = sev;
+    boost::log::core::get()->set_filter(filter);
 }
 
 #ifdef LOGGING_USE_SOURCE_LOCATION
@@ -132,7 +174,10 @@ void XLogFormatters::default_formatter(const boost::log::record_view& rec, boost
             << '[' << channel.get() << "] - ";
 
 #ifdef LOGGING_USE_SOURCE_LOCATION
-    if(severity > XLog::Severity::INFO && severity != XLog::Severity::WARNING2)
+    if(severity != XLog::Severity::INFO &&
+       severity != XLog::Severity::DEBUG2 &&
+       severity != XLog::Severity::WARNING2 &&
+       severity != XLog::Severity::ERROR2)
     {
         auto slc = boost::log::extract<std::source_location>("SourceLocation", rec);
         if(slc.empty())

@@ -32,13 +32,34 @@
 
 namespace XLog
 {
+    /*
+     * Why are there DEBUGS, WARNS, and ERRORS where we don't care about source location?
+     *
+     * Well sometimes a log is VERY unique so we don't need it since it's
+     * clear where to look for it!
+     *
+     * While I do sometimes find source location annoying, I recognize that a blanket
+     * option for ON/OFF isn't really suitable, so having multiple macros that
+     * allow you to conditionally apply that is useful in my opinion.
+     *
+     * Of course if you aren't using C++ 20 then it means nothing, but perhaps it can
+     * be argued that using the correct macros makes the eventual transition easier?
+     *
+     * I doubt I'll ever allow FATAL to not have a source location, they should be fairly rare
+     * outside of very specific situations where the error basically stops the program from
+     * executing, so even though that satisfies the "uniqueness" criteria I mentioned before,
+     * I still think source location is 'correct' (whatever that means...)
+     *
+     */
     enum class Severity
     {
-        INFO,
+        INFO = 0,
         DEBUG,
+        DEBUG2, // For debugs where we don't really need to know the source location (if enabled)
         WARNING,
         WARNING2, // For warnings where we don't really need to know the source location (if enabled)
         ERROR,
+        ERROR2, // For errors where we don't really need to know the source location (if enabled)
         FATAL
     };
 
@@ -47,6 +68,9 @@ namespace XLog
     inline std::string GetSeverityString(Severity sev) noexcept;
     LoggerType& GetNamedLogger(const std::string_view channel) noexcept;
     void InitializeLogging();
+
+    void SetGlobalLoggingLevel(Severity sev);
+    void SetLoggingLevel(Severity sev, std::string_view channel);
 }
 
 // Set attribute and return the new value
@@ -92,40 +116,52 @@ inline std::string get_errno_string()
 
 #define LOG_INFO() CUSTOM_LOG_SEV(__logger, XLog::Severity::INFO)
 #define LOG_DEBUG() CUSTOM_LOG_SEV(__logger, XLog::Severity::DEBUG)
+#define LOG_DEBUG2() CUSTOM_LOG_SEV(__logger, XLog::Severity::DEBUG2)
 #define LOG_WARN() CUSTOM_LOG_SEV(__logger, XLog::Severity::WARNING)
 #define LOG_WARN2() CUSTOM_LOG_SEV(__logger, XLog::Severity::WARNING2)
 #define LOG_ERROR() CUSTOM_LOG_SEV(__logger, XLog::Severity::ERROR)
+#define LOG_ERROR2() CUSTOM_LOG_SEV(__logger, XLog::Severity::ERROR2)
 
 #define CODE_INFO(errc) LOG_INFO() << ERRC_STREAM(errc)
 #define CODE_DEBUG(errc) LOG_DEBUG() << ERRC_STREAM(errc)
+#define CODE_DEBUG2(errc) LOG_DEBUG2() << ERRC_STREAM(errc)
 #define CODE_WARN(errc) LOG_WARN() << ERRC_STREAM(errc)
 #define CODE_WARN2(errc) LOG_WARN2() << ERRC_STREAM(errc)
 #define CODE_ERROR(errc) LOG_ERROR() << ERRC_STREAM(errc)
+#define CODE_ERROR2(errc) LOG_ERROR2() << ERRC_STREAM(errc)
 
 #define LOG_INFO_INPLACE(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::INFO)
 #define LOG_DEBUG_INPLACE(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::DEBUG)
+#define LOG_DEBUG2_INPLACE(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::DEBUG2)
 #define LOG_WARN_INPLACE(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::WARNING)
 #define LOG_WARN2_INPLACE(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::WARNING2)
 #define LOG_ERROR_INPLACE(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::ERROR)
+#define LOG_ERROR2_INPLACE(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::ERROR2)
 
 #define CODE_INFO_INPLACE(name, errc) LOG_INFO_INPLACE(name) << ERRC_STREAM(errc)
 #define CODE_DEBUG_INPLACE(name, errc) LOG_DEBUG_INPLACE(name) << ERRC_STREAM(errc)
+#define CODE_DEBUG2_INPLACE(name, errc) LOG_DEBUG2_INPLACE(name) << ERRC_STREAM(errc)
 #define CODE_WARN_INPLACE(name, errc) LOG_WARN_INPLACE(name) << ERRC_STREAM(errc)
 #define CODE_WARN2_INPLACE(name, errc) LOG_WARN2_INPLACE(name) << ERRC_STREAM(errc)
 #define CODE_ERROR_INPLACE(name, errc) LOG_ERROR_INPLACE(name) << ERRC_STREAM(errc)
+#define CODE_ERROR2_INPLACE(name, errc) LOG_ERROR2_INPLACE(name) << ERRC_STREAM(errc)
 
 #ifdef __linux__
 #define ERRNO_INFO() LOG_INFO() << ERRNO_STREAM
 #define ERRNO_DEBUG() LOG_DEBUG() << ERRNO_STREAM
+#define ERRNO_DEBUG2() LOG_DEBUG2() << ERRNO_STREAM
 #define ERRNO_WARN() LOG_WARN() << ERRNO_STREAM
 #define ERRNO_WARN2() LOG_WARN2() << ERRNO_STREAM
 #define ERRNO_ERROR() LOG_ERROR() << ERRNO_STREAM
+#define ERRNO_ERROR2() LOG_ERROR2() << ERRNO_STREAM
 
 #define ERRNO_INFO_INPLACE(name) LOG_INFO_INPLACE(name) << ERRNO_STREAM
 #define ERRNO_DEBUG_INPLACE(name) LOG_DEBUG_INPLACE(name) << ERRNO_STREAM
+#define ERRNO_DEBUG2_INPLACE(name) LOG_DEBUG2_INPLACE(name) << ERRNO_STREAM
 #define ERRNO_WARN_INPLACE(name) LOG_WARN_INPLACE(name) << ERRNO_STREAM
 #define ERRNO_WARN2_INPLACE(name) LOG_WARN2_INPLACE(name) << ERRNO_STREAM
 #define ERRNO_ERROR_INPLACE(name) LOG_ERROR_INPLACE(name) << ERRNO_STREAM
+#define ERRNO_ERROR2_INPLACE(name) LOG_ERROR2_INPLACE(name) << ERRNO_STREAM
 #endif
 
 namespace XLog
