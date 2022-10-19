@@ -20,10 +20,11 @@ add_library(xlog STATIC xlog.cpp)
 target_link_libraries(xlog PUBLIC ${LIBRARIES})
 
 set(include_dest "include/xlog")
-set(main_lib_dest "lib/xlog")
-set(lib_dest "${main_lib_dest}/${CMAKE_BUILD_TYPE}")
+set(project_lib_dest "lib/cmake/xlog")
+set(lib_dest "${project_lib_dest}/${CMAKE_BUILD_TYPE}")
 
-install(TARGETS xlog xlog-shared EXPORT xlog DESTINATION "${main_lib_dest}")
+install(TARGETS xlog EXPORT xlog DESTINATION lib)
+install(TARGETS xlog-shared EXPORT xlog-shared DESTINATION lib)
 install(FILES xlog.h DESTINATION "${include_dest}")
 install(
         EXPORT xlog
@@ -34,7 +35,7 @@ install(
 include(CMakePackageConfigHelpers)
 configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
   "${CMAKE_CURRENT_BINARY_DIR}/xlog-config.cmake"
-  INSTALL_DESTINATION "${main_lib_dest}"
+  INSTALL_DESTINATION "${project_lib_dest}"
 )
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/xlog-config.cmake DESTINATION "${main_lib_dest}")
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/xlog-config.cmake DESTINATION "${project_lib_dest}")
