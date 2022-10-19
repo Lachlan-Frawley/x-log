@@ -19,6 +19,8 @@ target_link_libraries(xlog-shared PUBLIC ${LIBRARIES})
 add_library(xlog STATIC xlog.cpp)
 target_link_libraries(xlog PUBLIC ${LIBRARIES})
 
+set_target_properties(xlog-shared PROPERTIES VERSION ${CMAKE_PROJECT_VERSION} SOVERSION 1)
+
 set(include_dest "include/xlog")
 set(project_lib_dest "lib/cmake/xlog")
 set(lib_dest "${project_lib_dest}/${CMAKE_BUILD_TYPE}")
