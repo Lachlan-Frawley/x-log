@@ -65,12 +65,19 @@ namespace XLog
 
     typedef boost::log::sources::severity_channel_logger_mt<Severity, std::string> LoggerType;
 
-    inline std::string GetSeverityString(Severity sev) noexcept;
+    std::string GetSeverityString(Severity sev) noexcept;
     LoggerType& GetNamedLogger(const std::string_view channel) noexcept;
     void InitializeLogging();
+    void ShutownLogging(int signal = -1);
 
     void SetGlobalLoggingLevel(Severity sev);
-    void SetLoggingLevel(Severity sev, std::string_view channel);
+    bool SetLoggingLevel(Severity sev, std::string_view channel);
+
+    Severity GetGlobalLoggingLevel();
+    Severity GetLoggingLevel(std::string_view channel);
+
+    std::unordered_map<std::string, Severity> GetAllLoggingLevels();
+    std::vector<std::string> GetAllLogHandles();
 }
 
 // Set attribute and return the new value

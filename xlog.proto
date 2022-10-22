@@ -1,3 +1,57 @@
 syntax = "proto3";
 
-package XLogProto;
+package xlogProto;
+
+message Void
+{
+
+}
+
+enum Severity
+{
+    SEV_UNKNOWN = 0;
+    SEV_INFO = 1;
+    SEV_DEBUG = 2;
+    SEV_WARNING = 3;
+    SEV_ERROR = 4;
+    SEV_FATAL = 5;
+}
+
+message SeverityMessage
+{
+    Severity value = 1;
+    bool use_source_location = 2;
+}
+
+message LogChannel
+{
+    string channel = 1;
+}
+
+message SetChannelSeverityMessage
+{
+    string channel = 1;
+    SeverityMessage severity = 2;
+}
+
+message AllLogLevelsMessage
+{
+    map<string, SeverityMessage> values = 1;
+}
+
+message AllLogHandlesMessage
+{
+    repeated string values = 1;
+}
+
+service RuntimeLogManagement
+{
+    rpc GetDefaultLogLevel(Void) returns (SeverityMessage) {}
+    rpc SetDefaultLogLevel(SeverityMessage) returns (Void) {}
+
+    rpc GetChannelLogLevel(LogChannel) returns (SeverityMessage) {}
+    rpc SetChannelSeverity(SetChannelSeverityMessage) returns (Void) {}
+
+    rpc GetAllLogLevels(Void) returns (AllLogLevelsMessage) {}
+    rpc GetAllLogHandles(Void) returns (AllLogHandlesMessage) {}
+}

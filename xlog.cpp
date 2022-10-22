@@ -1,15 +1,45 @@
 #include "xlog.h"
 
-#include <unordered_map>
+#ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
+#include "xlog_grpc.noexport.h"
+#include <grpcpp/server_builder.h>
+static xlog_grpc_server xlog_log_control;
+static std::unique_ptr<grpc::Server> ServerPointer;
+#endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
+
+#include <stdlib.h>
+
 #include <mutex>
+#include <atomic>
+#include <unordered_map>
 
 #include <boost/log/utility/setup.hpp>
 #include <boost/log/expressions/predicates/channel_severity_filter.hpp>
 
-typedef std::unordered_map<std::string, XLog::LoggerType, XLog::StringHash, std::equal_to<>> LoggerMap;
+BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", XLog::Severity)
+BOOST_LOG_ATTRIBUTE_KEYWORD(channel, "Channel", std::string)
+
+typedef boost::log::expressions::channel_severity_filter_actor<std::string, XLog::Severity> min_severity_filter;
+min_severity_filter& get_sev_filter()
+{
+    static min_severity_filter filter = boost::log::expressions::channel_severity_filter(channel, severity);
+    return filter;
+}
+
+struct LoggerInformation
+{
+    XLog::LoggerType logger;
+
+    std::string channel;
+    XLog::Severity severity;
+};
+
+typedef std::unordered_map<std::string, LoggerInformation, XLog::StringHash, std::equal_to<>> LoggerMap;
 static std::mutex _LoggerMutex;
 
-LoggerMap& GetLoggerMap() noexcept
+static std::atomic<XLog::Severity> _DefaultSeverity = XLog::Severity::INFO;
+
+static LoggerMap& GetLoggerMap() noexcept
 {
     static LoggerMap map;
     return map;
@@ -39,6 +69,12 @@ std::string XLog::GetSeverityString(Severity sev) noexcept
     return "???";
 }
 
+// For atexit()
+void call_exit()
+{
+    XLog::ShutownLogging(-1);
+}
+
 XLog::LoggerType& XLog::GetNamedLogger(const std::string_view channel) noexcept
 {
     GET_LOGGER_MAP(LoggerList)
@@ -51,10 +87,19 @@ XLog::LoggerType& XLog::GetNamedLogger(const std::string_view channel) noexcept
     if (found == LoggerList.end())
     {
         std::string channelString(channel);
-        std::pair<decltype(found), bool> emplaced = LoggerList.emplace(channelString, boost::log::keywords::channel = channelString);
+        std::pair<decltype(found), bool> emplaced = LoggerList.emplace(channelString, 
+        LoggerInformation
+        {
+            .logger = LoggerType{boost::log::keywords::channel = channelString},
+            .channel = channelString,
+            .severity = _DefaultSeverity
+        });
+
         if (emplaced.second)
         {
-            return emplaced.first->second;
+            min_severity_filter& filter = get_sev_filter();
+            filter[channelString] = _DefaultSeverity;
+            return emplaced.first->second.logger;
         }
         else
         {
@@ -64,7 +109,7 @@ XLog::LoggerType& XLog::GetNamedLogger(const std::string_view channel) noexcept
     }
     else
     {
-        return found->second;
+        return found->second.logger;
     }
 }
 
@@ -83,22 +128,43 @@ void XLog::InitializeLogging()
 #endif
 
         boost::log::add_common_attributes();
+
+#ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
+        if(!TRY_SETUP_THIS_PROGRAM_SOCKET())
+        {
+            // TODO - Error
+            return;
+        }
+
+        grpc::ServerBuilder builder;
+        builder.RegisterService(&xlog_log_control);
+        builder.AddListeningPort(fmt::format("unix://{0}", GET_THIS_PROGRAM_LOG_SOCKET_LOCATION()), grpc::InsecureServerCredentials());
+        ServerPointer = builder.BuildAndStart();
+
+        if(atexit(call_exit) != 0)
+        {
+            // TODO - Error
+            return;
+        }
+#endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
     }
 }
 
-BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", XLog::Severity)
-BOOST_LOG_ATTRIBUTE_KEYWORD(channel, "Channel", std::string)
-
-typedef boost::log::expressions::channel_severity_filter_actor<std::string, XLog::Severity> min_severity_filter;
-min_severity_filter& get_sev_filter()
+void XLog::ShutownLogging(int signal)
 {
-    static min_severity_filter filter = boost::log::expressions::channel_severity_filter(channel, severity);
-    return filter;
+#ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
+    if(ServerPointer)
+    {
+        ServerPointer->Shutdown();
+    }
+    TRY_SHUTDOWN_THIS_PROGRAM_SOCKET();
+#endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
 }
 
 void XLog::SetGlobalLoggingLevel(XLog::Severity sev)
 {
     GET_LOGGER_MAP(all_loggers)
+    _DefaultSeverity.store(sev);
     min_severity_filter& filter = get_sev_filter();
 
     for(const auto& [key, value] : all_loggers)
@@ -109,12 +175,80 @@ void XLog::SetGlobalLoggingLevel(XLog::Severity sev)
     boost::log::core::get()->set_filter(filter);
 }
 
-void XLog::SetLoggingLevel(XLog::Severity sev, std::string_view channel)
+bool XLog::SetLoggingLevel(XLog::Severity sev, std::string_view channel)
 {
     GET_LOGGER_MAP(all_loggers)
-    min_severity_filter& filter = get_sev_filter();
-    filter[std::string(channel)] = sev;
-    boost::log::core::get()->set_filter(filter);
+#if __cplusplus >= 202003L
+    auto found = all_loggers.find(channel);
+#else
+    auto found = all_loggers.find(std::string(channel));
+#endif
+
+    if(found != all_loggers.end())
+    {
+        found->second.severity = sev;
+
+        min_severity_filter& filter = get_sev_filter();
+        filter[std::string(channel)] = sev;
+        boost::log::core::get()->set_filter(filter);
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+XLog::Severity XLog::GetGlobalLoggingLevel()
+{
+    return _DefaultSeverity;
+}
+
+XLog::Severity XLog::GetLoggingLevel(std::string_view channel)
+{
+    GET_LOGGER_MAP(all_loggers)
+
+#if __cplusplus >= 202003L
+    auto found = all_loggers.find(channel);
+#else
+    auto found = all_loggers.find(std::string(channel));
+#endif
+
+    if(found == all_loggers.end())
+    {
+        return _DefaultSeverity;
+    }
+    else
+    {
+        return found->second.severity;
+    }
+}
+
+std::unordered_map<std::string, XLog::Severity> XLog::GetAllLoggingLevels()
+{
+    GET_LOGGER_MAP(all_loggers)
+
+    std::unordered_map<std::string, XLog::Severity> rValue;
+    for(const auto& [key, value] : all_loggers)
+    {
+        rValue[key] = value.severity;
+    }
+
+    return rValue;
+}
+
+std::vector<std::string> XLog::GetAllLogHandles()
+{
+    GET_LOGGER_MAP(all_loggers)
+
+    std::vector<std::string> rValue(all_loggers.size(), std::string{});
+    for(const auto& [key, value] : all_loggers)
+    {
+        rValue.push_back(key);
+    }
+
+    return rValue;
 }
 
 #ifdef LOGGING_USE_SOURCE_LOCATION

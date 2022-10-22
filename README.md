@@ -158,13 +158,13 @@ ERRNO_FATAL_NAMED(name)
 ## External Log Control (TODO)
 Sometimes we want to be able to control logging without having to restart the program, and since xlog allows runtime changing of the log levels, it seems reasonable to have some kind of method to connect to a program that is running and edit its logging configuration.
 
-To accomplish this we create a Unix socket like so: ```/tmp/xlog-${PROGNAME}-${PID}.socket```, now an external program can connect and manipulate the programs log settings.
+To accomplish this we create a Unix socket like so: ```/tmp/xlog/${PID}-${PROGNAME}.socket```, now an external program can connect and manipulate the programs log settings.
 
-To facilitate this, a gRPC interface exists which defines how the external program must communicate with the xlog instance running inside the target.
+To facilitate this, a gRPC interface exists which defines how the external program must communicate with the xlog instance running inside the target. To install gRPC, follow the instructuctions [here|https://grpc.io/docs/languages/cpp/quickstart]
 
 Of course I can see now that some people might not find value in this, so it can be disabled via
 
-```-DENABLE_EXTERNAL_LOG_CONTROL=off```
+```-DENABLE_EXTERNAL_LOG_CONTROL=OFF```
 
 When building the cmake project.
 

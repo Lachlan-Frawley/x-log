@@ -4,6 +4,7 @@ project(xlog VERSION 0.1.0 LANGUAGES CXX)
 option(ENABLE_EXTERNAL_LOG_CONTROL "Allow external programs to manage runtime logging by connecting to a Unix socket" ON)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(fmt REQUIRED)
 find_package(Boost REQUIRED COMPONENTS log)
@@ -15,11 +16,14 @@ set(LIBRARIES
 	fmt::fmt
 )
 
-set(SOURCE_FILES xlog.cpp)
+set(LIB_SOURCE_FILES xlog.cpp)
+set(TEST_SOURCE_FILES test_program.cpp)
 
 set(EXPORT_HEADERS xlog.h)
 
 if(ENABLE_EXTERNAL_LOG_CONTROL)
+	add_compile_definitions(XLOG_ENABLE_EXTERNAL_LOG_CONTROL)
+
 	find_package(Protobuf REQUIRED)
 	find_package(gRPC CONFIG REQUIRED)
 
@@ -28,16 +32,21 @@ if(ENABLE_EXTERNAL_LOG_CONTROL)
 	PROTOBUF_GENERATE_CPP(ProtoSources ProtoHeaders ${ProtoFiles})
 	PROTOBUF_GENERATE_GRPC_CPP(ProtoGRPCSources ProtoGRPCHeaders ${ProtoFiles})
 
-	set(SOURCE_FILES
-		${SOURCE_FILES}
+	set(LIB_SOURCE_FILES
+		${LIB_SOURCE_FILES}
+		xlog_grpc.cpp
+		xlog_grpc_util.cpp
+		${ProtoSources}
+		${ProtoGRPCSources})
+
+	set(TEST_SOURCE_FILES
+		${TEST_SOURCE_FILES}
 		${ProtoSources}
 		${ProtoGRPCSources})
 
 	set(EXPORT_HEADERS
 		${EXPORT_HEADERS}
-		xlog.proto
-		${ProtoHeaders}
-		${ProtoGRPCHeaders})
+		xlog.proto)
 
 	set(LIBRARIES
 		${LIBRARIES}
@@ -47,15 +56,19 @@ if(ENABLE_EXTERNAL_LOG_CONTROL)
 		)
 endif(ENABLE_EXTERNAL_LOG_CONTROL)
 
-add_library(xlog-shared SHARED ${SOURCE_FILES})
+add_library(xlog-shared SHARED ${LIB_SOURCE_FILES})
 target_link_libraries(xlog-shared PUBLIC ${LIBRARIES})
 
-add_library(xlog STATIC ${SOURCE_FILES})
+add_library(xlog STATIC ${LIB_SOURCE_FILES})
 target_link_libraries(xlog PUBLIC ${LIBRARIES})
+
+add_executable(xlog-test ${TEST_SOURCE_FILES})
+target_link_libraries(xlog-test PUBLIC xlog)
 
 if(ENABLE_EXTERNAL_LOG_CONTROL)
 	target_include_directories(xlog-shared PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 	target_include_directories(xlog PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+	target_include_directories(xlog-test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif(ENABLE_EXTERNAL_LOG_CONTROL)
 
 set_target_properties(xlog-shared PROPERTIES VERSION ${CMAKE_PROJECT_VERSION} SOVERSION 1)
