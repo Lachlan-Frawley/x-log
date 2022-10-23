@@ -88,6 +88,153 @@ std::string bool_to_enabled(bool val)
     }
 }
 
+typedef std::unique_ptr<xlogProto::RuntimeLogManagement::Stub>& StubRef;
+
+void GetGlobalLevel(StubRef stub, std::ostream& out)
+{
+    grpc::ClientContext context;
+    xlogProto::Void _vd;
+
+    xlogProto::SeverityMessage message;
+    auto status = stub->GetDefaultLogLevel(&context, _vd, &message);
+    if(!status.ok())
+    {
+        out << "Failed to call stub 'GetDefaultLogLevel' -> " << status.error_message() << std::endl;
+    }
+    else
+    {
+        out
+            << "Level: " << log_level_to_string(message.value()) << std::endl
+            << "Source Location: " << bool_to_enabled(message.use_source_location()) << std::endl;
+    }
+}
+
+void GetChannelLevel(StubRef stub, std::ostream& out, const std::string& channel)
+{
+    grpc::ClientContext context;
+    xlogProto::LogChannel channelMessage;
+    channelMessage.set_channel(channel);
+
+    xlogProto::SeverityMessage message;
+    auto status = stub->GetChannelLogLevel(&context, channelMessage, &message);
+    if(!status.ok())
+    {
+        out << "Failed to call stub 'GetChannelLogLevel' -> " << status.error_message() << std::endl;
+    }
+    else
+    {
+        out
+            << "Level: " << log_level_to_string(message.value()) << std::endl
+            << "Source Location: " << bool_to_enabled(message.use_source_location()) << std::endl;
+    }
+}
+
+void GetAllLogLevels(StubRef stub, std::ostream& out)
+{
+    grpc::ClientContext context;
+    xlogProto::Void _vd;
+
+    xlogProto::AllLogLevelsMessage message;
+    auto status = stub->GetAllLogLevels(&context, _vd, &message);
+    if(!status.ok())
+    {
+        out << "Failed to call stub 'GetAllLogLevels' -> " << status.error_message() << std::endl;
+    }
+    else
+    {
+        for(const auto& [handle, sev] : message.values())
+        {
+            if(handle.empty())
+            {
+                continue;
+            }
+
+            out
+                << "Handle = " << handle
+                << ", Log Level = " << log_level_to_string(sev.value())
+                << ", SLOC = " << bool_to_enabled(sev.use_source_location())
+                << std::endl;
+        }
+    }
+}
+
+void GetAllHandles(StubRef stub, std::ostream& out)
+{
+    grpc::ClientContext context;
+    xlogProto::Void _vd;
+
+    xlogProto::AllLogHandlesMessage message;
+    auto status = stub->GetAllLogHandles(&context, _vd, &message);
+    if(!status.ok())
+    {
+        out << "Failed to call stub 'GetAllLogHandles' -> " << status.error_message() << std::endl;
+    }
+    else
+    {
+        for(const auto& handle : message.values())
+        {
+            if(handle.empty())
+            {
+                continue;
+            }
+
+            out
+                << "Handle = " << handle
+                << std::endl;
+        }
+    }
+}
+
+void SetGlobalLevel(StubRef stub, std::ostream& out, const std::string& level, bool with_sloc)
+{
+    grpc::ClientContext context;
+    xlogProto::Void _vd;
+
+    xlogProto::SeverityMessage severity;
+    severity.set_use_source_location(with_sloc);
+
+    xlogProto::Severity sev;
+    if(!string_to_log_level(level, sev))
+    {
+        out << "Could not convert log level string to valid log level" << std::endl;
+        return;
+    }
+    severity.set_value(sev);
+
+    auto status = stub->SetDefaultLogLevel(&context, severity, &_vd);
+    if(!status.ok())
+    {
+        out << "Failed to call stub 'SetDefaultLogLevel' -> " << status.error_message() << std::endl;
+    }
+}
+
+void SetChannelLevel(StubRef stub, std::ostream& out, const std::string& channel, const std::string& level, bool with_sloc)
+{
+    grpc::ClientContext context;
+    xlogProto::Void _vd;
+
+    xlogProto::SeverityMessage severity;
+    severity.set_use_source_location(with_sloc);
+
+    xlogProto::Severity sev;
+    if(!string_to_log_level(level, sev))
+    {
+        out << "Could not convert log level string to valid log level" << std::endl;
+        return;
+    }
+    severity.set_value(sev);
+
+    xlogProto::SetChannelSeverityMessage setMessage;
+    setMessage.set_channel(channel);
+    setMessage.mutable_severity()->CopyFrom(severity);
+
+    auto status = stub->SetChannelSeverity(&context, setMessage, &_vd);
+    if(!status.ok())
+    {
+        out << "Failed to call stub 'SetChannelSeverity' -> " << status.error_message() << std::endl;
+    }
+}
+
 int main(int argc, char** argv)
 {
     CLI::App app{"xlog External Management Tool"};
@@ -130,223 +277,44 @@ int main(int argc, char** argv)
         auto root_menu = std::make_unique<cli::Menu>("xlog");
 
         root_menu->Insert(
-        "getgloballevel",
-        [&stub](std::ostream& out)
-        {
-            grpc::ClientContext context;
-            xlogProto::Void _vd;
-
-            xlogProto::SeverityMessage message;
-            auto status = stub->GetDefaultLogLevel(&context, _vd, &message);
-            if(!status.ok())
-            {
-                out << "Failed to call stub 'GetDefaultLogLevel' -> " << status.error_message() << std::endl;
-            }
-            else
-            {
-                out
-                    << "Level: " << log_level_to_string(message.value()) << std::endl
-                    << "Source Location: " << bool_to_enabled(message.use_source_location()) << std::endl;
-            }
-        },
-        "Get the global/default logging level");
+            "getgloballevel",
+            [&stub](std::ostream& out) { GetGlobalLevel(stub, out); },
+            "Get the global/default logging level");
 
         root_menu->Insert(
-        "getchannellevel",
-        [&stub](std::ostream& out, const std::string& channel)
-        {
-            grpc::ClientContext context;
-            xlogProto::LogChannel channelMessage;
-            channelMessage.set_channel(channel);
-
-            xlogProto::SeverityMessage message;
-            auto status = stub->GetChannelLogLevel(&context, channelMessage, &message);
-            if(!status.ok())
-            {
-                out << "Failed to call stub 'GetChannelLogLevel' -> " << status.error_message() << std::endl;
-            }
-            else
-            {
-                out
-                    << "Level: " << log_level_to_string(message.value()) << std::endl
-                    << "Source Location: " << bool_to_enabled(message.use_source_location()) << std::endl;
-            }
-        },
-        "Get logging level for the given channel");
+            "getchannellevel",
+            [&stub](std::ostream& out, const std::string& channel) { GetChannelLevel(stub, out, channel); },
+            "Get logging level for the given channel");
 
         root_menu->Insert(
-        "getalllevels",
-        [&stub](std::ostream& out)
-        {
-            grpc::ClientContext context;
-            xlogProto::Void _vd;
-
-            xlogProto::AllLogLevelsMessage message;
-            auto status = stub->GetAllLogLevels(&context, _vd, &message);
-            if(!status.ok())
-            {
-                out << "Failed to call stub 'GetAllLogLevels' -> " << status.error_message() << std::endl;
-            }
-            else
-            {
-                for(const auto& [handle, sev] : message.values())
-                {
-                    if(handle.empty())
-                    {
-                        continue;
-                    }
-
-                    out
-                        << "Handle = " << handle
-                        << ", Log Level = " << log_level_to_string(sev.value())
-                        << ", SLOC = " << bool_to_enabled(sev.use_source_location())
-                        << std::endl;
-                }
-            }
-        },
-        "Get all log handles & their severities");
+            "getalllevels",
+            [&stub](std::ostream& out) { GetAllLogLevels(stub, out); },
+            "Get all log handles & their severities");
 
         root_menu->Insert(
-        "getallhandles",
-        [&stub](std::ostream& out)
-        {
-            grpc::ClientContext context;
-            xlogProto::Void _vd;
-
-            xlogProto::AllLogHandlesMessage message;
-            auto status = stub->GetAllLogHandles(&context, _vd, &message);
-            if(!status.ok())
-            {
-                out << "Failed to call stub 'GetAllLogHandles' -> " << status.error_message() << std::endl;
-            }
-            else
-            {
-                for(const auto& handle : message.values())
-                {
-                    if(handle.empty())
-                    {
-                        continue;
-                    }
-
-                    out
-                        << "Handle = " << handle
-                        << std::endl;
-                }
-            }
-        },
-        "Get all log handles");
+            "getallhandles",
+            [&stub](std::ostream& out) { GetAllHandles(stub, out); },
+            "Get all log handles");
 
         root_menu->Insert(
-        "setgloballevel",
-        [&stub](std::ostream& out, const std::string& level)
-        {
-            grpc::ClientContext context;
-            xlogProto::Void _vd;
-
-            xlogProto::SeverityMessage severity;
-            severity.set_use_source_location(false);
-
-            xlogProto::Severity sev;
-            if(!string_to_log_level(level, sev))
-            {
-                out << "Could not convert log level string to valid log level" << std::endl;
-                return;
-            }
-            severity.set_value(sev);
-
-            auto status = stub->SetDefaultLogLevel(&context, severity, &_vd);
-            if(!status.ok())
-            {
-                out << "Failed to call stub 'SetDefaultLogLevel' -> " << status.error_message() << std::endl;
-            }
-        },
-        "Set the global/default log level");
+            "setgloballevel",
+            [&stub](std::ostream& out, const std::string& level) { SetGlobalLevel(stub, out, level, false); },
+            "Set the global/default log level");
 
         root_menu->Insert(
-        "setgloballevel",
-        [&stub](std::ostream& out, const std::string& level, bool with_sloc = false)
-        {
-            grpc::ClientContext context;
-            xlogProto::Void _vd;
-
-            xlogProto::SeverityMessage severity;
-            severity.set_use_source_location(with_sloc);
-
-            xlogProto::Severity sev;
-            if(!string_to_log_level(level, sev))
-            {
-                out << "Could not convert log level string to valid log level" << std::endl;
-                return;
-            }
-            severity.set_value(sev);
-
-            auto status = stub->SetDefaultLogLevel(&context, severity, &_vd);
-            if(!status.ok())
-            {
-                out << "Failed to call stub 'SetDefaultLogLevel' -> " << status.error_message() << std::endl;
-            }
-        },
-        "Set the global/default log level");
+            "setgloballevel",
+            [&stub](std::ostream& out, const std::string& level, bool with_sloc) { SetGlobalLevel(stub, out, level, with_sloc); },
+            "Set the global/default log level");
 
         root_menu->Insert(
-        "setchannellevel",
-        [&stub](std::ostream& out, const std::string& channel, const std::string& level)
-        {
-            grpc::ClientContext context;
-            xlogProto::Void _vd;
-
-            xlogProto::SeverityMessage severity;
-            severity.set_use_source_location(false);
-
-            xlogProto::Severity sev;
-            if(!string_to_log_level(level, sev))
-            {
-                out << "Could not convert log level string to valid log level" << std::endl;
-                return;
-            }
-            severity.set_value(sev);
-
-            xlogProto::SetChannelSeverityMessage setMessage;
-            setMessage.set_channel(channel);
-            setMessage.mutable_severity()->CopyFrom(severity);
-
-            auto status = stub->SetChannelSeverity(&context, setMessage, &_vd);
-            if(!status.ok())
-            {
-                out << "Failed to call stub 'SetChannelSeverity' -> " << status.error_message() << std::endl;
-            }
-        },
-        "Set logging level for the given channel");
+            "setchannellevel",
+            [&stub](std::ostream& out, const std::string& channel, const std::string& level) { SetChannelLevel(stub, out, channel, level, false); },
+            "Set logging level for the given channel");
 
         root_menu->Insert(
-        "setchannellevel",
-        [&stub](std::ostream& out, const std::string& channel, const std::string& level, bool with_sloc = false)
-        {
-            grpc::ClientContext context;
-            xlogProto::Void _vd;
-
-            xlogProto::SeverityMessage severity;
-            severity.set_use_source_location(with_sloc);
-
-            xlogProto::Severity sev;
-            if(!string_to_log_level(level, sev))
-            {
-                out << "Could not convert log level string to valid log level" << std::endl;
-                return;
-            }
-            severity.set_value(sev);
-
-            xlogProto::SetChannelSeverityMessage setMessage;
-            setMessage.set_channel(channel);
-            setMessage.mutable_severity()->CopyFrom(severity);
-
-            auto status = stub->SetChannelSeverity(&context, setMessage, &_vd);
-            if(!status.ok())
-            {
-                out << "Failed to call stub 'SetChannelSeverity' -> " << status.error_message() << std::endl;
-            }
-        },
-        "Set logging level for the given channel");
+            "setchannellevel",
+            [&stub](std::ostream& out, const std::string& channel, const std::string& level, bool with_sloc) { SetChannelLevel(stub, out, channel, level, with_sloc); },
+            "Set logging level for the given channel");
 
         cli::Cli cli(std::move(root_menu));
         cli.StdExceptionHandler(
