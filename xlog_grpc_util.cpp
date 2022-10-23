@@ -93,9 +93,15 @@ static auto SOCKET_REGEX = std::regex(R"(^([0-9]+)-(.+)\.socket$)");
 
 #define CERRC(errc, msg) std::cerr << errc.message() << "; " << msg << std::endl;
 
-std::vector<std::string> TRY_GET_PROGRAM_LOG_SOCKET(const std::string& program_name)
+std::vector<std::string> TRY_GET_PROGRAM_LOG_SOCKET(const std::string& program_name, int pid)
 {
     std::vector<std::string> candidates;
+
+    auto pid_str = std::to_string(pid);
+    if(pid < 0)
+    {
+        pid_str = {};
+    }
 
     std::error_code err;
     auto itr = std::filesystem::directory_iterator(BASE_SOCKET_PATH, std::filesystem::directory_options::skip_permission_denied, err);
@@ -117,10 +123,11 @@ std::vector<std::string> TRY_GET_PROGRAM_LOG_SOCKET(const std::string& program_n
 
         if(!is_socket)
         {
+            std::cout << "File is not socket" << std::endl;
             continue;
         }
 
-        std::string match_name = sockFile.path().stem();
+        std::string match_name = sockFile.path().filename();
 
         std::smatch sock_match;
         if(std::regex_search(match_name, sock_match, SOCKET_REGEX))
@@ -134,7 +141,17 @@ std::vector<std::string> TRY_GET_PROGRAM_LOG_SOCKET(const std::string& program_n
 
             if(sock_match[2].compare(program_name) == 0)
             {
-                candidates.push_back(sockFile.path());
+                if(pid_str.empty())
+                {
+                    candidates.push_back(sockFile.path());
+                }
+                else
+                {
+                    if(sock_match[1].compare(pid_str) == 0)
+                    {
+                        candidates.push_back(sockFile.path());
+                    }
+                }
             }
         }
     }

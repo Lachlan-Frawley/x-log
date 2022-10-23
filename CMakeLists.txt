@@ -69,6 +69,12 @@ if(ENABLE_EXTERNAL_LOG_CONTROL)
 	target_include_directories(xlog-shared PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 	target_include_directories(xlog PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 	target_include_directories(xlog-test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
+	find_package(cli REQUIRED)
+	find_package(CLI11 REQUIRED)
+	add_executable(xlog-manager xlog_manager.cpp)
+	target_link_libraries(xlog-manager PUBLIC xlog cli::cli CLI11::CLI11)
+	target_include_directories(xlog-manager PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif(ENABLE_EXTERNAL_LOG_CONTROL)
 
 set_target_properties(xlog-shared PROPERTIES VERSION ${CMAKE_PROJECT_VERSION} SOVERSION 1)

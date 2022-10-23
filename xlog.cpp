@@ -8,6 +8,7 @@ static std::unique_ptr<grpc::Server> ServerPointer;
 #endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
 
 #include <stdlib.h>
+#include <sys/stat.h>
 
 #include <mutex>
 #include <atomic>
@@ -140,6 +141,7 @@ void XLog::InitializeLogging()
         builder.RegisterService(&xlog_log_control);
         builder.AddListeningPort(fmt::format("unix://{0}", GET_THIS_PROGRAM_LOG_SOCKET_LOCATION()), grpc::InsecureServerCredentials());
         ServerPointer = builder.BuildAndStart();
+        //chmod(GET_THIS_PROGRAM_LOG_SOCKET_LOCATION().c_str(), (S_IRUSR | S_IWUSR) | (S_IRGRP | S_IWGRP) | (S_IROTH | S_IWOTH));
 
         if(atexit(call_exit) != 0)
         {
