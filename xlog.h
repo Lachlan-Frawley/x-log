@@ -1,27 +1,19 @@
 #pragma once
 
-/*
- * Because the logging header should be included 
- * pretty much everywhere, we can use it to
- * disable optimization everywhere...
- */
-#ifdef __XLOG_DebugMode
-#pragma optimize("", off)
-#endif
+#ifndef _XLOG_H
+#define _XLOG_H
 
-#ifdef __linux__
 #include <errno.h>
 #include <string.h>
-#endif
 
 #include <string>
+#include <stdexcept>
 #include <string_view>
 #include <type_traits>
-#include <stdexcept>
 
 #include <boost/log/trivial.hpp>
-#include <boost/log/sources/severity_channel_logger.hpp>
 #include <boost/log/utility/manipulators/add_value.hpp>
+#include <boost/log/sources/severity_channel_logger.hpp>
 
 #include <fmt/core.h>
 
@@ -64,7 +56,8 @@ namespace XLog
         WARNING2, // For warnings where we don't really need to know the source location (if enabled)
         ERROR,
         ERROR2, // For errors where we don't really need to know the source location (if enabled)
-        FATAL
+        FATAL,
+        INTERNAL // For xlog itself, can never be disabled (knowing why your logger failed is *really* important)
     };
 
     typedef boost::log::sources::severity_channel_logger_mt<Severity, std::string> LoggerType;
@@ -75,10 +68,10 @@ namespace XLog
     void ShutownLogging(int signal = -1);
 
     void SetGlobalLoggingLevel(Severity sev);
-    bool SetLoggingLevel(Severity sev, std::string_view channel);
+    bool SetLoggingLevel(Severity sev, const std::string_view channel);
 
     Severity GetGlobalLoggingLevel();
-    Severity GetLoggingLevel(std::string_view channel);
+    Severity GetLoggingLevel(const std::string_view channel);
 
     std::unordered_map<std::string, Severity> GetAllLoggingLevels();
     std::vector<std::string> GetAllLogHandles();
@@ -110,8 +103,6 @@ ValueType set_get_attrib(const char* name, ValueType value) {
 
 #define ERRC_STREAM(errc) errc.message() << std::endl
 
-#ifdef __linux__
-
 inline std::string get_errno_string()
 {
     constexpr int BUFFER_SIZE = 256;
@@ -123,7 +114,6 @@ inline std::string get_errno_string()
 }
 
 #define ERRNO_STREAM get_errno_string()
-#endif
 
 #define LOG_INFO() CUSTOM_LOG_SEV(__logger, XLog::Severity::INFO)
 #define LOG_DEBUG() CUSTOM_LOG_SEV(__logger, XLog::Severity::DEBUG)
@@ -157,7 +147,6 @@ inline std::string get_errno_string()
 #define CODE_ERROR_INPLACE(name, errc) LOG_ERROR_INPLACE(name) << ERRC_STREAM(errc)
 #define CODE_ERROR2_INPLACE(name, errc) LOG_ERROR2_INPLACE(name) << ERRC_STREAM(errc)
 
-#ifdef __linux__
 #define ERRNO_INFO() LOG_INFO() << ERRNO_STREAM
 #define ERRNO_DEBUG() LOG_DEBUG() << ERRNO_STREAM
 #define ERRNO_DEBUG2() LOG_DEBUG2() << ERRNO_STREAM
@@ -173,7 +162,6 @@ inline std::string get_errno_string()
 #define ERRNO_WARN2_INPLACE(name) LOG_WARN2_INPLACE(name) << ERRNO_STREAM
 #define ERRNO_ERROR_INPLACE(name) LOG_ERROR_INPLACE(name) << ERRNO_STREAM
 #define ERRNO_ERROR2_INPLACE(name) LOG_ERROR2_INPLACE(name) << ERRNO_STREAM
-#endif
 
 namespace XLog
 {
@@ -301,3 +289,5 @@ namespace XLog
         }
     };
 }
+
+#endif // _XLOG_H

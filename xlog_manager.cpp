@@ -1,5 +1,5 @@
-#include <iostream>
 #include <cctype>
+#include <iostream>
 
 #include "xlog_grpc_util.noexport.h"
 

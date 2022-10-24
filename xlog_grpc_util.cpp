@@ -1,6 +1,18 @@
 #include "xlog_grpc_util.noexport.h"
 
+#include <regex>
 #include <iostream>
+#include <filesystem>
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <fmt/core.h>
+
+#include "xlog_log_internal.noexport.h"
+
+extern const char* __progname;
+
+static auto SOCKET_REGEX = std::regex(R"(^([0-9]+)-(.+)\.socket$)");
 
 xlogProto::SeverityMessage make_severity_message(XLog::Severity severity)
 {
@@ -74,24 +86,12 @@ XLog::Severity severity_from_message(const xlogProto::SeverityMessage& msg)
     return XLog::Severity::INFO;
 }
 
-#include <unistd.h>
-#include <fmt/core.h>
-
-extern const char* __progname;
-
 std::string GET_THIS_PROGRAM_LOG_SOCKET_LOCATION()
 {
     // Might as well cache it since it should probably never change
     static auto CACHED = fmt::format("{0}/{1}-{2}.socket", BASE_SOCKET_PATH, getpid(), __progname);
     return CACHED;
 }
-
-#include <filesystem>
-#include <regex>
-
-static auto SOCKET_REGEX = std::regex(R"(^([0-9]+)-(.+)\.socket$)");
-
-#define CERRC(errc, msg) std::cerr << errc.message() << "; " << msg << std::endl;
 
 std::vector<xlog_socket_candidate> TRY_GET_PROGRAM_LOG_SOCKET(const std::string& program_name, int pid)
 {
@@ -101,8 +101,7 @@ std::vector<xlog_socket_candidate> TRY_GET_PROGRAM_LOG_SOCKET(const std::string&
     auto itr = std::filesystem::directory_iterator(BASE_SOCKET_PATH, std::filesystem::directory_options::skip_permission_denied, err);
     if(err)
     {
-        // TODO - Error
-        CERRC(err, "Failed to get directory iterator")
+        INTERNAL_CODE(err) << "; Failed to get directory iterator";
         return candidates;
     }
 
@@ -111,8 +110,7 @@ std::vector<xlog_socket_candidate> TRY_GET_PROGRAM_LOG_SOCKET(const std::string&
         bool is_socket = sockFile.is_socket(err);
         if(err)
         {
-            // TODO - Error
-            CERRC(err, "Failed to check if file is socket")
+            INTERNAL_CODE(err) << "; Failed to check if file is socket";
         }
 
         if(!is_socket)
@@ -128,8 +126,7 @@ std::vector<xlog_socket_candidate> TRY_GET_PROGRAM_LOG_SOCKET(const std::string&
         {
             if(sock_match.size() != 3)
             {
-                // TODO - Error
-                CERRC(err, "sock_match size != 3 (" << sock_match.size() << ')')
+                INTERNAL_CODE(err) << "; sock_match size != 3 (" << sock_match.size() << ')';
                 continue;
             }
 
@@ -161,8 +158,6 @@ std::vector<xlog_socket_candidate> TRY_GET_PROGRAM_LOG_SOCKET(const std::string&
     return candidates;
 }
 
-#include <fcntl.h>
-
 bool TRY_SETUP_THIS_PROGRAM_SOCKET()
 {
     const auto LOG_SOCKET = GET_THIS_PROGRAM_LOG_SOCKET_LOCATION();
@@ -170,12 +165,10 @@ bool TRY_SETUP_THIS_PROGRAM_SOCKET()
     std::error_code err;
     if(!std::filesystem::exists(BASE_SOCKET_PATH, err))
     {
-        // TODO - Error
         std::filesystem::create_directories(BASE_SOCKET_PATH, err);
         if(err)
         {
-            // TODO - Error
-            CERRC(err, "Failed to create directory")
+            INTERNAL_CODE(err) << "; Failed to create directory";
             return false;
         }
     }
@@ -183,8 +176,7 @@ bool TRY_SETUP_THIS_PROGRAM_SOCKET()
     {
         if(!std::filesystem::is_directory(BASE_SOCKET_PATH, err))
         {
-            // TODO - Error
-            CERRC(err, "Base socket path is not directoy")
+            INTERNAL_CODE(err) << "; Base socket path is not a directory";
             return false;
         }
     }
@@ -192,8 +184,7 @@ bool TRY_SETUP_THIS_PROGRAM_SOCKET()
     auto socket_exists = std::filesystem::exists(LOG_SOCKET, err);
     if(err)
     {
-        // TODO - Error
-        CERRC(err, "Failed to check if socket exists")
+        INTERNAL_CODE(err) << "; Failed to check if socket exists";
         return false;
     }
 
@@ -201,8 +192,7 @@ bool TRY_SETUP_THIS_PROGRAM_SOCKET()
     {
         if(::unlink(LOG_SOCKET.c_str()) != 0)
         {
-            // TODO - Error
-            perror("Failed to unlink socket");
+            INTERNAL_ERRNO() << "; Failed to unlink socket";
             return false;
         }
     }

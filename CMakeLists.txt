@@ -99,6 +99,9 @@ set(lib_dest "${project_lib_dest}")
 
 install(TARGETS xlog EXPORT xlog DESTINATION lib)
 install(TARGETS xlog-shared EXPORT xlog-shared DESTINATION lib)
+if(ENABLE_EXTERNAL_LOG_CONTROL)
+	install(TARGETS xlog-manager DESTINATION bin)
+endif(ENABLE_EXTERNAL_LOG_CONTROL)
 install(FILES ${EXPORT_HEADERS} DESTINATION "${include_dest}")
 install(
         EXPORT xlog

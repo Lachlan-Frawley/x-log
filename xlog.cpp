@@ -20,6 +20,8 @@ static std::unique_ptr<grpc::Server> ServerPointer;
 BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", XLog::Severity)
 BOOST_LOG_ATTRIBUTE_KEYWORD(channel, "Channel", std::string)
 
+#include "xlog_log_internal.noexport.h"
+
 typedef boost::log::expressions::channel_severity_filter_actor<std::string, XLog::Severity> min_severity_filter;
 min_severity_filter& get_sev_filter()
 {
@@ -65,6 +67,8 @@ std::string XLog::GetSeverityString(Severity sev) noexcept
             return "ERROR";
         case Severity::FATAL:
             return "FATAL";
+        case Severity::INTERNAL:
+            return "INTERNAL";
     }
 
     return "???";
@@ -78,6 +82,11 @@ void call_exit()
 
 XLog::LoggerType& XLog::GetNamedLogger(const std::string_view channel) noexcept
 {
+    if(channel.compare(INTERNAL_LOGGER_NAME) == 0)
+    {
+        return INTERNAL_LOGGER;
+    }
+
     GET_LOGGER_MAP(LoggerList)
 
 #if __cplusplus >= 202003L
@@ -105,6 +114,7 @@ XLog::LoggerType& XLog::GetNamedLogger(const std::string_view channel) noexcept
         else
         {
             // TODO - Is there a better way to handle this?
+            INTERNAL() << "Failed to put new logger into map - terminating";
             exit(1);
         }
     }
@@ -122,7 +132,7 @@ void XLog::InitializeLogging()
     {
         isInitialized = true;
 
-        boost::log::add_console_log(std::cout, boost::log::keywords::format = &XLogFormatters::default_formatter);
+        boost::log::add_console_log(std::clog, boost::log::keywords::format = &XLogFormatters::default_formatter);
 
 #ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
         boost::log::core::get()->add_global_attribute("SourceLocation", boost::log::attributes::mutable_constant<std::source_location>(std::source_location::current()));
@@ -133,7 +143,7 @@ void XLog::InitializeLogging()
 #ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
         if(!TRY_SETUP_THIS_PROGRAM_SOCKET())
         {
-            // TODO - Error
+            INTERNAL() << "Failed to setup environment for xlog socket";
             return;
         }
 
@@ -141,11 +151,16 @@ void XLog::InitializeLogging()
         builder.RegisterService(&xlog_log_control);
         builder.AddListeningPort(fmt::format("unix://{0}", GET_THIS_PROGRAM_LOG_SOCKET_LOCATION()), grpc::InsecureServerCredentials());
         ServerPointer = builder.BuildAndStart();
-        //chmod(GET_THIS_PROGRAM_LOG_SOCKET_LOCATION().c_str(), (S_IRUSR | S_IWUSR) | (S_IRGRP | S_IWGRP) | (S_IROTH | S_IWOTH));
+
+        // Make sure log socket is accessible by anyone
+        if(chmod(GET_THIS_PROGRAM_LOG_SOCKET_LOCATION().c_str(), (S_IRUSR | S_IWUSR) | (S_IRGRP | S_IWGRP) | (S_IROTH | S_IWOTH)) < 0)
+        {
+            INTERNAL_ERRNO() << "; Failed to modify permissions for xlog socket";
+        }
 
         if(atexit(call_exit) != 0)
         {
-            // TODO - Error
+            INTERNAL() << "Failed to set atexit() for xlog";
             return;
         }
 #endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
@@ -177,7 +192,7 @@ void XLog::SetGlobalLoggingLevel(XLog::Severity sev)
     boost::log::core::get()->set_filter(filter);
 }
 
-bool XLog::SetLoggingLevel(XLog::Severity sev, std::string_view channel)
+bool XLog::SetLoggingLevel(XLog::Severity sev, const std::string_view channel)
 {
     GET_LOGGER_MAP(all_loggers)
 #if __cplusplus >= 202003L
@@ -207,7 +222,7 @@ XLog::Severity XLog::GetGlobalLoggingLevel()
     return _DefaultSeverity;
 }
 
-XLog::Severity XLog::GetLoggingLevel(std::string_view channel)
+XLog::Severity XLog::GetLoggingLevel(const std::string_view channel)
 {
     GET_LOGGER_MAP(all_loggers)
 
@@ -287,15 +302,11 @@ void XLog::fatal_exception::print_fatal(XLog::LoggerType& logger) const
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-std::string get_file_name(const std::string& path)
+#include <filesystem>
+
+std::string get_file_name(const std::string_view path)
 {
-#ifdef __linux__
-    return { path.begin() + static_cast<int>(1 + path.find_last_of('/')), path.end() };
-#elif _WIN32
-    return { path.begin() + static_cast<int>(1 + path.find_last_of('\\')), path.end() };
-#else
-#error Your platform does not seem to be Windows or Linux; please add the relevant entry in log_formatters...
-#endif
+    return std::filesystem::path(path).filename();
 }
 
 void XLogFormatters::default_formatter(const boost::log::record_view& rec, boost::log::formatting_ostream& stream)
