@@ -124,7 +124,7 @@ void XLog::InitializeLogging()
 
         boost::log::add_console_log(std::cout, boost::log::keywords::format = &XLogFormatters::default_formatter);
 
-#ifdef LOGGING_USE_SOURCE_LOCATION
+#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
         boost::log::core::get()->add_global_attribute("SourceLocation", boost::log::attributes::mutable_constant<std::source_location>(std::source_location::current()));
 #endif
 
@@ -253,18 +253,18 @@ std::vector<std::string> XLog::GetAllLogHandles()
     return rValue;
 }
 
-#ifdef LOGGING_USE_SOURCE_LOCATION
-XLog::fatal_exception::fatal_exception(XLog::LoggerType& logger, const std::string& what_arg, std::source_location sloc) : std::runtime_error(what_arg)
+#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
+XLog::fatal_exception::fatal_exception(XLog::LoggerType& logger, const std::string& what_arg, const std::source_location sloc) : std::runtime_error(what_arg)
 {
     print_fatal(logger, sloc);
 }
 
-XLog::fatal_exception::fatal_exception(XLog::LoggerType& logger, const char* what_arg, std::source_location sloc) : std::runtime_error(what_arg)
+XLog::fatal_exception::fatal_exception(XLog::LoggerType& logger, const char* what_arg, const std::source_location sloc) : std::runtime_error(what_arg)
 {
     print_fatal(logger, sloc);
 }
 
-void XLog::fatal_exception::print_fatal(XLog::LoggerType& logger, std::source_location sloc) const
+void XLog::fatal_exception::print_fatal(XLog::LoggerType& logger, const std::source_location sloc) const
 {
     CUSTOM_LOG_SEV_SLOC(logger, XLog::Severity::FATAL, sloc) << what();
 }
@@ -309,7 +309,7 @@ void XLogFormatters::default_formatter(const boost::log::record_view& rec, boost
             << '<' << XLog::GetSeverityString(severity.get()) << "> "
             << '[' << channel.get() << "] - ";
 
-#ifdef LOGGING_USE_SOURCE_LOCATION
+#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
     if(severity != XLog::Severity::INFO &&
        severity != XLog::Severity::DEBUG2 &&
        severity != XLog::Severity::WARNING2 &&

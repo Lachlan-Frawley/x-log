@@ -2,8 +2,22 @@ cmake_minimum_required(VERSION 3.16)
 project(xlog VERSION 0.1.0 LANGUAGES CXX)
 
 option(ENABLE_EXTERNAL_LOG_CONTROL "Allow external programs to manage runtime logging by connecting to a Unix socket" ON)
+option(USE_SOURCE_LOCATION "If available, include source location in some logging commands" ON)
+
+if(ENABLE_EXTERNAL_LOG_CONTROL)
+	add_compile_definitions(XLOG_ENABLE_EXTERNAL_LOG_CONTROL)
+endif(ENABLE_EXTERNAL_LOG_CONTROL)
+
+if(USE_SOURCE_LOCATION)
+	add_compile_definitions(XLOG_USE_SOURCE_LOCATION_IF_AVAILABLE)
+endif(USE_SOURCE_LOCATION)
 
 set(CMAKE_CXX_STANDARD 17)
+if("cxx_std_20" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+	message("C++ 20 support detected")
+	set(CMAKE_CXX_STANDARD 20)
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(fmt REQUIRED)

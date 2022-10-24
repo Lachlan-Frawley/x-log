@@ -26,8 +26,12 @@
 #include <fmt/core.h>
 
 #ifdef __cpp_lib_source_location
-#define LOGGING_USE_SOURCE_LOCATION
+#ifdef XLOG_USE_SOURCE_LOCATION_IF_AVAILABLE
+
+#define XLOG_LOGGING_USE_SOURCE_LOCATION
 #include <source_location>
+
+#endif
 #endif
 
 namespace XLog
@@ -88,7 +92,7 @@ ValueType set_get_attrib(const char* name, ValueType value) {
     return attr.get();
 }
 
-#ifdef LOGGING_USE_SOURCE_LOCATION
+#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
 #define CUSTOM_LOG_SEV_SLOC(logger, sev, sloc) \
    BOOST_LOG_STREAM_WITH_PARAMS( \
       (logger), \
@@ -176,12 +180,12 @@ namespace XLog
     class fatal_exception : public std::runtime_error
     {
     public:
-    #ifdef LOGGING_USE_SOURCE_LOCATION
-        explicit fatal_exception(XLog::LoggerType& logger, const std::string& what_arg, std::source_location sloc = std::source_location::current());
-        explicit fatal_exception(XLog::LoggerType& logger, const char* what_arg, std::source_location sloc = std::source_location::current());
+    #ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
+        explicit fatal_exception(XLog::LoggerType& logger, const std::string& what_arg, const std::source_location sloc = std::source_location::current());
+        explicit fatal_exception(XLog::LoggerType& logger, const char* what_arg, const std::source_location sloc = std::source_location::current());
 
         template<typename... FormatArgs>
-        explicit fatal_exception(XLog::LoggerType& logger, std::source_location sloc, std::string_view format, FormatArgs&&... args) : std::runtime_error(fmt::vformat(format, fmt::make_format_args(std::forward<FormatArgs>(args)...)))
+        explicit fatal_exception(XLog::LoggerType& logger, const std::source_location sloc, std::string_view format, FormatArgs&&... args) : std::runtime_error(fmt::vformat(format, fmt::make_format_args(std::forward<FormatArgs>(args)...)))
         {
             print_fatal(logger, sloc);
         }
@@ -197,8 +201,8 @@ namespace XLog
     #endif
 
     private:
-    #ifdef LOGGING_USE_SOURCE_LOCATION
-        void print_fatal(XLog::LoggerType& logger, std::source_location sloc) const;
+    #ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
+        void print_fatal(XLog::LoggerType& logger, const std::source_location sloc) const;
     #else
         void print_fatal(XLog::LoggerType& logger) const;
     #endif
@@ -231,7 +235,7 @@ namespace XLog
 #define ERRNO_FATAL_GLOBAL() FATAL_GLOBAL(ERNNO_MESSAGE)
 #endif
 
-#ifdef LOGGING_USE_SOURCE_LOCATION
+#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
 #define FATAL_FMT(fmt, ...) throw XLog::fatal_exception(__logger, std::source_location::current(), fmt, __VA_ARGS__);
 #define FATAL_NAMED_FMT(name, fmt, ...) throw XLog::fatal_exception(XLog::GetNamedLogger(name), std::source_location::current(), fmt, __VA_ARGS__);
 #define FATAL_GLOBAL_FMT(fmt, ...) FATAL_NAMED_FMT("Global", std::source_location::current(), fmt, __VA_ARGS__)

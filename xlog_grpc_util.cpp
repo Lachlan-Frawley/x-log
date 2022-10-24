@@ -93,15 +93,9 @@ static auto SOCKET_REGEX = std::regex(R"(^([0-9]+)-(.+)\.socket$)");
 
 #define CERRC(errc, msg) std::cerr << errc.message() << "; " << msg << std::endl;
 
-std::vector<std::string> TRY_GET_PROGRAM_LOG_SOCKET(const std::string& program_name, int pid)
+std::vector<xlog_socket_candidate> TRY_GET_PROGRAM_LOG_SOCKET(const std::string& program_name, int pid)
 {
-    std::vector<std::string> candidates;
-
-    auto pid_str = std::to_string(pid);
-    if(pid < 0)
-    {
-        pid_str = {};
-    }
+    std::vector<xlog_socket_candidate> candidates;
 
     std::error_code err;
     auto itr = std::filesystem::directory_iterator(BASE_SOCKET_PATH, std::filesystem::directory_options::skip_permission_denied, err);
@@ -141,15 +135,23 @@ std::vector<std::string> TRY_GET_PROGRAM_LOG_SOCKET(const std::string& program_n
 
             if(sock_match[2].compare(program_name) == 0)
             {
-                if(pid_str.empty())
+                std::string captured_pid(sock_match[1]);
+                auto cand = xlog_socket_candidate
                 {
-                    candidates.push_back(sockFile.path());
+                    .path = sockFile.path(),
+                    .program_name = program_name,
+                    .pid = std::atoi(captured_pid.c_str())
+                };
+
+                if(pid < 0)
+                {
+                    candidates.emplace_back(std::move(cand));
                 }
                 else
                 {
-                    if(sock_match[1].compare(pid_str) == 0)
+                    if(cand.pid == pid)
                     {
-                        candidates.push_back(sockFile.path());
+                        candidates.emplace_back(std::move(cand));
                     }
                 }
             }

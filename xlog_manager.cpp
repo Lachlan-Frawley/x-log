@@ -8,13 +8,8 @@
 #include <cli/cli.h>
 #include <cli/loopscheduler.h>
 #include <cli/clilocalsession.h>
-#include <cli/filehistorystorage.h>
 
 #include <CLI/CLI.hpp>
-
-#ifdef __cpp_lib_source_location
-#define XLOG_LOGGING_USE_SOURCE_LOCATION
-#endif
 
 void to_lower(std::string& value)
 {
@@ -109,11 +104,7 @@ void GetGlobalLevel(StubRef stub, std::ostream& out)
     else
     {
         out
-            << "Level: " << log_level_to_string(message.value()) << std::endl
-#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-            << "Source Location: " << bool_to_enabled(message.use_source_location()) << std::endl
-#endif
-            ;
+            << "Level: " << log_level_to_string(message.value()) << std::endl;
     }
 }
 
@@ -132,11 +123,7 @@ void GetChannelLevel(StubRef stub, std::ostream& out, const std::string& channel
     else
     {
         out
-            << "Level: " << log_level_to_string(message.value()) << std::endl
-#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-            << "Source Location: " << bool_to_enabled(message.use_source_location()) << std::endl
-#endif
-            ;
+            << "Level: " << log_level_to_string(message.value()) << std::endl;
     }
 }
 
@@ -163,9 +150,6 @@ void GetAllLogLevels(StubRef stub, std::ostream& out)
             out
                 << "Handle = " << handle
                 << ", Log Level = " << log_level_to_string(sev.value())
-#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-                << ", SLOC = " << bool_to_enabled(sev.use_source_location())
-#endif
                 << std::endl;
         }
     }
@@ -198,13 +182,13 @@ void GetAllHandles(StubRef stub, std::ostream& out)
     }
 }
 
-void SetGlobalLevel(StubRef stub, std::ostream& out, const std::string& level, bool with_sloc)
+void SetGlobalLevel(StubRef stub, std::ostream& out, const std::string& level)
 {
     grpc::ClientContext context;
     xlogProto::Void _vd;
 
     xlogProto::SeverityMessage severity;
-    severity.set_use_source_location(with_sloc);
+    severity.set_use_source_location(true);
 
     xlogProto::Severity sev;
     if(!string_to_log_level(level, sev))
@@ -221,13 +205,13 @@ void SetGlobalLevel(StubRef stub, std::ostream& out, const std::string& level, b
     }
 }
 
-void SetChannelLevel(StubRef stub, std::ostream& out, const std::string& channel, const std::string& level, bool with_sloc)
+void SetChannelLevel(StubRef stub, std::ostream& out, const std::string& channel, const std::string& level)
 {
     grpc::ClientContext context;
     xlogProto::Void _vd;
 
     xlogProto::SeverityMessage severity;
-    severity.set_use_source_location(with_sloc);
+    severity.set_use_source_location(true);
 
     xlogProto::Severity sev;
     if(!string_to_log_level(level, sev))
@@ -264,13 +248,7 @@ int main(int argc, char** argv)
     bool get_all_handles = false;
 
     std::string set_default_level;
-#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-    std::tuple<std::string, bool> set_default_level_sloc;
-#endif
     std::tuple<std::string, std::string> set_channel_level;
-#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-    std::tuple<std::string, std::string, bool> set_channel_level_sloc;
-#endif
 
     auto name_opt = app.add_option("-n, --name", app_name, "Name of the application to manage")
         ->required(true);
@@ -291,15 +269,9 @@ int main(int argc, char** argv)
     auto get_all_handles_opt = command_group->add_flag("--get-all-channels", get_all_handles, "Get all log channels");
 
     auto set_default_level_opt = command_group->add_option("--set-default-level", set_default_level, "Set the default/global log level");
-#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-    auto set_default_level_sloc_opt = command_group->add_option("--set-default-level", set_default_level_sloc, "Set the default/global log level");
-#endif
     auto set_channel_level_opt = command_group->add_option("--set-channel-level", set_channel_level, "Set the level of a specific log channel");
-#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-    auto set_channel_level_sloc_opt = command_group->add_option("--set-channel-level", set_channel_level_sloc, "Set the level of a specific log channel");
-#endif
 
-        app.footer(
+    app.footer(
 R"""(
 Valid Log Levels:
     INFO
@@ -309,24 +281,9 @@ Valid Log Levels:
     FATAL
 
 Log levels are case insensitive for ease of use
-)"""
-#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-R"""(
-If source lines are enabled, extra commands for setting the log level to also log the source line will be present.
-
-The following log levels support source lines:
-    DEBUG
-    WARNING
-    ERROR
-    FATAL (always has source lines)
-)"""
-#endif
-);
+)""");
 
     CLI11_PARSE(app, argc, argv);
-
-    //std::cout << "Command Group Count = " << command_group->count_all() << std::endl;
-    //return 0;
 
     auto candidates = TRY_GET_PROGRAM_LOG_SOCKET(app_name, app_pid);
     if(candidates.empty())
@@ -338,12 +295,16 @@ The following log levels support source lines:
     else if(candidates.size() != 1)
     {
         // Can't work out which candidate
-        std::cout << "Too many candidates for connection (" << candidates.size() << ')' << std::endl;
+        std::cout << "Multiple candidates for connection:" << std::endl;
+        for(const auto& cnd : candidates)
+        {
+            std::cout << "PID " << cnd.pid << std::endl;
+        }
         return 1;
     }
 
-    std::string socket = candidates.front();
-    auto channel = grpc::CreateChannel(fmt::format("unix://{0}", socket), grpc::InsecureChannelCredentials());
+    xlog_socket_candidate socket = candidates.front();
+    auto channel = grpc::CreateChannel(fmt::format("unix://{0}", socket.path), grpc::InsecureChannelCredentials());
     auto stub = xlogProto::RuntimeLogManagement::NewStub(channel);
 
     // Default to using shell
@@ -378,29 +339,15 @@ The following log levels support source lines:
 
         root_menu->Insert(
             "SetGlobalLevel",
-            [&stub](std::ostream& out, const std::string& level) { SetGlobalLevel(stub, out, level, false); },
+            [&stub](std::ostream& out, const std::string& level) { SetGlobalLevel(stub, out, level); },
             "Set the global/default log level");
-
-#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-        root_menu->Insert(
-            "SetGlobalLevel",
-            [&stub](std::ostream& out, const std::string& level, bool with_sloc) { SetGlobalLevel(stub, out, level, with_sloc); },
-            "Set the global/default log level");
-#endif
 
         root_menu->Insert(
             "SetChannelLevel",
-            [&stub](std::ostream& out, const std::string& channel, const std::string& level) { SetChannelLevel(stub, out, channel, level, false); },
+            [&stub](std::ostream& out, const std::string& channel, const std::string& level) { SetChannelLevel(stub, out, channel, level); },
             "Set logging level for the given channel");
 
-#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-        root_menu->Insert(
-            "SetChannelLevel",
-            [&stub](std::ostream& out, const std::string& channel, const std::string& level, bool with_sloc) { SetChannelLevel(stub, out, channel, level, with_sloc); },
-            "Set logging level for the given channel");
-#endif
-
-        cli::Cli cli(std::move(root_menu), std::make_unique<cli::FileHistoryStorage>(".cli"));
+        cli::Cli cli(std::move(root_menu));
         cli.StdExceptionHandler(
                 [](std::ostream& out, const std::string& cmd, const std::exception& e)
                 {
@@ -441,22 +388,12 @@ The following log levels support source lines:
     }
     else if(*set_default_level_opt)
     {
-        SetGlobalLevel(stub, std::cout, set_default_level, false);
+        SetGlobalLevel(stub, std::cout, set_default_level);
     }
     else if(*set_channel_level_opt)
     {
-        SetChannelLevel(stub, std::cout, std::get<0>(set_channel_level), std::get<1>(set_channel_level), false);
+        SetChannelLevel(stub, std::cout, std::get<0>(set_channel_level), std::get<1>(set_channel_level));
     }
-#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-    else if(*set_default_level_sloc_opt)
-    {
-        SetGlobalLevel(stub, std::cout, std::get<0>(set_default_level), std::get<1>(set_default_level));
-    }
-    else if(*set_channel_level_sloc_opt)
-    {
-        SetChannelLevel(stub, std::cout, std::get<0>(set_channel_level), std::get<1>(set_channel_level), std::get<2>(set_channel_level));
-    }
-#endif
     else
     {
         std::cerr << "Given command is unknown or invalid" << std::endl;
