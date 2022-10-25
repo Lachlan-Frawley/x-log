@@ -215,13 +215,11 @@ namespace XLog
  * Log ERRNO messages
  * TODO - Expand
  */
-#ifdef __linux__
 #define ERRNO_MESSAGE get_errno_string()
 
 #define ERRNO_FATAL() FATAL(ERRNO_MESSAGE)
 #define ERRNO_FATAL_NAMED(name) FATAL_NAMED(name, ERRNO_MESSAGE)
 #define ERRNO_FATAL_GLOBAL() FATAL_GLOBAL(ERNNO_MESSAGE)
-#endif
 
 #ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
 #define FATAL_FMT(fmt, ...) throw XLog::fatal_exception(__logger, std::source_location::current(), fmt, __VA_ARGS__);

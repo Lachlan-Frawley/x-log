@@ -3,27 +3,34 @@ I wrote xlog as a simple and extendable logging mechanism for a long forgotten p
 
 # Requirements
 - C++ 17 at minimum
-- C++ 20 enables using std::string, std::string_view, and char* as keys to query the logger map
-- Source location is enabled if present (C++ >=20)
-- Boost Log (not sure how early a version you can get away with, minimum I've tried is 1.72)
+- C++ 20 enables using ```std::string```, ```std::string_view```, and ```char*``` as keys to query the logger map
+- Source location is enabled if present and enabled (C++ >=20)
+- Boost Log v2 (not sure how early a version you can get away with, minimum I've tried is 1.72)
 - libfmt
+- Protobuf & gRPC (if external log control is enabled)
 
 # Notes
-- Only logs to stderr
+- Logs to std::clog
 - Can be used in a multi-threaded environment
 - Has its own exception that writes to the log (and includes source location)
 - Not tested in an exception-less environment
 
-# TODO
+# CMake Default Options
+- ```-DENABLE_EXTERNAL_LOG_CONTROL=OFF```, when set to ```ON```, enables external log management (requires gRPC, Protobuf)
+- ```-DUSE_SOURCE_LOCATION=ON```, If C++20 support is available, this enables logging source location for some log lines
+
+# Features I want to add
+- Normal log macros that use string formatting rather than streams
+- Code/Errno macros that use formatting rather than streams
 - Log to syslog or journal
 - Log to files
-- Add fatal CODE and ERRNO macros
-- Add log control socket & external log control program
 - Add instance loggers (i.e. named instances)
+- Allow adding and removing log sinks via external management
 - Add checks for exceptions and handle FATAL() macros differently if they are disabled
 - Expand CODE_SEV(code) macros to give more information
 - Expand ERRNO_SEV() macros to give more information
 - Test in more environments
+- Automated testing
 
 # How to use
 Pretty much all of the logging macros look for a special named variable which is filled in by the ```GET_LOGGER(name)``` macro. This macro is meant to be used in a source file, but can be used in other places (i.e. functions), but this can lead to some interesting behaviour, so just put it in your source file for now (there are other mechanisms to log without using this macro).
@@ -35,14 +42,24 @@ INFO,
 DEBUG,
 DEBUG2,
 WARNING,
-WARNING2, // For warnings where we don't really need to know the source location (if enabled)
+WARNING2,
 ERROR,
 ERROR2,
-FATAL
+FATAL,
+INTERNAL    // Used by xlog as the internal log level (can never be disabled)
 ```
-Essentially, if source location exists, then logs with the severity of DEBUG or higher will have their source location in the log line (excluding WARNING2/WARN2). The information is a bit stripped down though, only showing the file name (not path), and the offending line. Of course, feel free to change it to do what you need to.
+Log levels with a '2' in their name will not log source location (with the exception of INFO, which never logs source locations). The source location sent to the log is stripped down slightly, only showing the offending function, file (path stripped), and line number.
 
-Currently, all severity levels are always enabled. I am looking to change this, and because all of the following macros eventually come back to the ```CUSTOM_LOG_SEV()``` macro from the Boost log library, only enabled severity levels will execute the code associated with log statements.
+## External Log Control
+Sometimes we want to be able to control logging without having to restart the program, and since xlog allows runtime changing of the log levels, it seems reasonable to have some kind of method to connect to a program that is running and edit its logging configuration.
+
+To accomplish this we create a Unix socket like so: ```/tmp/xlog/${PID}-${PROGNAME}.socket```, now an external program can connect and manipulate the programs log settings.
+
+To facilitate this, a gRPC interface exists which defines how the external program must communicate with the xlog instance running inside the target. To install gRPC, follow the instructuctions here: https://grpc.io/docs/languages/cpp/quickstart
+
+This is disabled by default and can be enabled like so via CMake:
+
+```-DENABLE_EXTERNAL_LOG_CONTROL=ON```
 
 ## Normal Logging
 ```
@@ -154,18 +171,3 @@ FATAL_NAMED_FMT(name, fmt, ...)
 CODE_FATAL_NAMED(name, errc)
 ERRNO_FATAL_NAMED(name)
 ```
-
-## External Log Control (TODO)
-Sometimes we want to be able to control logging without having to restart the program, and since xlog allows runtime changing of the log levels, it seems reasonable to have some kind of method to connect to a program that is running and edit its logging configuration.
-
-To accomplish this we create a Unix socket like so: ```/tmp/xlog/${PID}-${PROGNAME}.socket```, now an external program can connect and manipulate the programs log settings.
-
-To facilitate this, a gRPC interface exists which defines how the external program must communicate with the xlog instance running inside the target. To install gRPC, follow the instructuctions [here|https://grpc.io/docs/languages/cpp/quickstart]
-
-Of course I can see now that some people might not find value in this, so it can be disabled via
-
-```-DENABLE_EXTERNAL_LOG_CONTROL=OFF```
-
-When building the cmake project.
-
-TODO :)

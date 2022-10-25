@@ -250,7 +250,7 @@ int main(int argc, char** argv)
     std::string set_default_level;
     std::tuple<std::string, std::string> set_channel_level;
 
-    auto name_opt = app.add_option("-n, --name", app_name, "Name of the application to manage")
+    auto name_opt = app.add_option("NAME", app_name, "Name of the application to manage")
         ->required(true);
 
     app.add_option("-p, --pid", app_pid, "PID of the application to manage")

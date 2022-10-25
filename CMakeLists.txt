@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(xlog VERSION 0.1.0 LANGUAGES CXX)
+project(xlog VERSION 0.2.0 LANGUAGES CXX)
 
 option(ENABLE_EXTERNAL_LOG_CONTROL "Allow external programs to manage runtime logging by connecting to a Unix socket" ON)
 option(USE_SOURCE_LOCATION "If available, include source location in some logging commands" ON)
