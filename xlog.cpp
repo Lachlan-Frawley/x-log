@@ -25,9 +25,14 @@ static std::unique_ptr<grpc::Server> ServerPointer;
 
 #ifdef XLOG_USE_SYSLOG_LOG
 #include <boost/log/sinks/syslog_backend.hpp>
-//static std::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>> SYSLOG_BACKEND_PTR;
+static boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>> SYSLOG_BACKEND_PTR;
 static boost::log::sinks::syslog::custom_severity_mapping<XLog::Severity> SYSLOG_SEV_MAPPER("Severity");
 #endif //XLOG_USE_SYSLOG_LOG
+
+#ifdef XLOG_USE_JOURNAL_LOG
+#include "xlog_journal.noexport.h"
+static boost::shared_ptr<boost::log::sinks::synchronous_sink<xlog_journal_backend>> JOURNAL_BACKEND_PTR;
+#endif // XLOG_USE_JOURNAL_LOG
 
 #include "xlog_log_internal.noexport.h"
 
@@ -169,9 +174,9 @@ void XLog::InitializeLogging(LogSettings settings)
             SYSLOG_SEV_MAPPER[XLog::Severity::ERROR] = boost::log::sinks::syslog::level::error;
             SYSLOG_SEV_MAPPER[XLog::Severity::ERROR2] = boost::log::sinks::syslog::level::error;
             SYSLOG_SEV_MAPPER[XLog::Severity::FATAL] = boost::log::sinks::syslog::level::critical;
-            SYSLOG_SEV_MAPPER[XLog::Severity::INTERNAL] = boost::log::sinks::syslog::level::emergency;
+            SYSLOG_SEV_MAPPER[XLog::Severity::INTERNAL] = boost::log::sinks::syslog::level::alert;
 
-            boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>> SYSLOG_BACKEND_PTR(new boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>(_XLOG_SET_IMPL, boost::log::keywords::facility = LOGGER_SETTINGS.s_syslog.facility));
+            SYSLOG_BACKEND_PTR = boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>>(new boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>(_XLOG_SET_IMPL, boost::log::keywords::facility = LOGGER_SETTINGS.s_syslog.facility));
             SYSLOG_BACKEND_PTR->locked_backend()->set_severity_mapper(SYSLOG_SEV_MAPPER);
             SYSLOG_BACKEND_PTR->set_formatter(&XLogFormatters::default_formatter);
 
@@ -180,6 +185,16 @@ void XLog::InitializeLogging(LogSettings settings)
         }
     #undef _XLOG_SET_IMPL
 #endif // XLOG_USE_SYSLOG_LOG
+
+#ifdef XLOG_USE_JOURNAL_LOG
+        if(LOGGER_SETTINGS.s_journal.enabled)
+        {
+            JOURNAL_BACKEND_PTR = boost::shared_ptr<boost::log::sinks::synchronous_sink<xlog_journal_backend>>(new boost::log::sinks::synchronous_sink<xlog_journal_backend>);
+
+            boost::log::core::get()->add_sink(JOURNAL_BACKEND_PTR);
+            INTERNAL() << "Added journal backed";
+        }
+#endif // XLOG_USE_JOURNAL_LOG
 
 #ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
         // Dirty solution that lets us "break" from this part of the setup at any time
