@@ -1,11 +1,6 @@
 #include "xlog.h"
 
-#ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
-#include "xlog_grpc.noexport.h"
-#include <grpcpp/server_builder.h>
-static xlog_grpc_server xlog_log_control;
-static std::unique_ptr<grpc::Server> ServerPointer;
-#endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
+static XLog::LogSettings LOGGER_SETTINGS;
 
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -19,6 +14,20 @@ static std::unique_ptr<grpc::Server> ServerPointer;
 
 BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", XLog::Severity)
 BOOST_LOG_ATTRIBUTE_KEYWORD(channel, "Channel", std::string)
+
+#ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
+#include "xlog_grpc.noexport.h"
+#include <grpcpp/server_builder.h>
+static xlog_grpc_server xlog_log_control;
+static std::unique_ptr<grpc::Server> ServerPointer;
+#endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
+
+
+#ifdef XLOG_USE_SYSLOG_LOG
+#include <boost/log/sinks/syslog_backend.hpp>
+//static std::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>> SYSLOG_BACKEND_PTR;
+static boost::log::sinks::syslog::custom_severity_mapping<XLog::Severity> SYSLOG_SEV_MAPPER("Severity");
+#endif //XLOG_USE_SYSLOG_LOG
 
 #include "xlog_log_internal.noexport.h"
 
@@ -124,13 +133,17 @@ XLog::LoggerType& XLog::GetNamedLogger(const std::string_view channel) noexcept
     }
 }
 
-void XLog::InitializeLogging()
+void XLog::InitializeLogging(LogSettings settings)
 {
     static bool isInitialized = false;
 
     if(!isInitialized)
     {
         isInitialized = true;
+        LOGGER_SETTINGS = std::move(settings);
+        {
+            _DefaultSeverity.store(LOGGER_SETTINGS.s_default_level);
+        }
 
         boost::log::add_console_log(std::clog, boost::log::keywords::format = &XLogFormatters::default_formatter);
 
@@ -140,28 +153,85 @@ void XLog::InitializeLogging()
 
         boost::log::add_common_attributes();
 
+#ifdef XLOG_USE_SYSLOG_LOG
+    #ifdef BOOST_LOG_USE_NATIVE_SYSLOG
+        #define _XLOG_SET_IMPL boost::log::keywords::use_impl = boost::log::sinks::syslog::impl_types::native
+    #else
+        #define _XLOG_SET_IMPL boost::log::keywords::use_impl = boost::log::sinks::syslog::impl_types::udp_socket_based
+    #endif // BOOST_LOG_USE_NATIVE_SYSLOG
+        if(LOGGER_SETTINGS.s_syslog.enabled)
+        {
+            SYSLOG_SEV_MAPPER[XLog::Severity::INFO] = boost::log::sinks::syslog::level::debug;
+            SYSLOG_SEV_MAPPER[XLog::Severity::DEBUG] = boost::log::sinks::syslog::level::info;
+            SYSLOG_SEV_MAPPER[XLog::Severity::DEBUG2] = boost::log::sinks::syslog::level::info;
+            SYSLOG_SEV_MAPPER[XLog::Severity::WARNING] = boost::log::sinks::syslog::level::warning;
+            SYSLOG_SEV_MAPPER[XLog::Severity::WARNING2] = boost::log::sinks::syslog::level::warning;
+            SYSLOG_SEV_MAPPER[XLog::Severity::ERROR] = boost::log::sinks::syslog::level::error;
+            SYSLOG_SEV_MAPPER[XLog::Severity::ERROR2] = boost::log::sinks::syslog::level::error;
+            SYSLOG_SEV_MAPPER[XLog::Severity::FATAL] = boost::log::sinks::syslog::level::critical;
+            SYSLOG_SEV_MAPPER[XLog::Severity::INTERNAL] = boost::log::sinks::syslog::level::emergency;
+
+            boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>> SYSLOG_BACKEND_PTR(new boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>(_XLOG_SET_IMPL, boost::log::keywords::facility = LOGGER_SETTINGS.s_syslog.facility));
+            SYSLOG_BACKEND_PTR->locked_backend()->set_severity_mapper(SYSLOG_SEV_MAPPER);
+            SYSLOG_BACKEND_PTR->set_formatter(&XLogFormatters::default_formatter);
+
+            boost::log::core::get()->add_sink(SYSLOG_BACKEND_PTR);
+            INTERNAL() << "Added syslog backed";
+        }
+    #undef _XLOG_SET_IMPL
+#endif // XLOG_USE_SYSLOG_LOG
+
 #ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
-        if(!TRY_SETUP_THIS_PROGRAM_SOCKET())
+        // Dirty solution that lets us "break" from this part of the setup at any time
+        bool XLOG_EXTERNAL_CONTROL_SUCCESS = false;
+        while(true)
         {
-            INTERNAL() << "Failed to setup environment for xlog socket";
-            return;
+            if(!LOGGER_SETTINGS.s_external_control.enabled)
+            {
+                INTERNAL() << "xlog external control is not enabled, aborting setup";\
+                XLOG_EXTERNAL_CONTROL_SUCCESS = true;
+                break;
+            }
+
+            if(!TRY_SETUP_THIS_PROGRAM_SOCKET())
+            {
+                INTERNAL() << "Failed to setup environment for xlog socket";
+                break;
+            }
+
+            grpc::ServerBuilder builder;
+            builder.RegisterService(&xlog_log_control);
+            builder.AddListeningPort(fmt::format("unix://{0}", GET_THIS_PROGRAM_LOG_SOCKET_LOCATION()), grpc::InsecureServerCredentials());
+            ServerPointer = builder.BuildAndStart();
+
+            if(LOGGER_SETTINGS.s_external_control.allow_anyone_access)
+            {
+                // Make sure log socket is accessible by anyone
+                if(chmod(GET_THIS_PROGRAM_LOG_SOCKET_LOCATION().c_str(), (S_IRUSR | S_IWUSR) | (S_IRGRP | S_IWGRP) | (S_IROTH | S_IWOTH)) < 0)
+                {
+                    INTERNAL_ERRNO() << "; Failed to modify permissions for xlog socket";
+
+                    // Only break if setup failures are fatal, since this is a somewhat recoverable error
+                    if(LOGGER_SETTINGS.s_external_control.setup_failure_is_fatal)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if(atexit(call_exit) != 0)
+            {
+                INTERNAL() << "Failed to set atexit() for xlog";
+                break;
+            }
+
+            XLOG_EXTERNAL_CONTROL_SUCCESS = true;
+            break;
         }
-
-        grpc::ServerBuilder builder;
-        builder.RegisterService(&xlog_log_control);
-        builder.AddListeningPort(fmt::format("unix://{0}", GET_THIS_PROGRAM_LOG_SOCKET_LOCATION()), grpc::InsecureServerCredentials());
-        ServerPointer = builder.BuildAndStart();
-
-        // Make sure log socket is accessible by anyone
-        if(chmod(GET_THIS_PROGRAM_LOG_SOCKET_LOCATION().c_str(), (S_IRUSR | S_IWUSR) | (S_IRGRP | S_IWGRP) | (S_IROTH | S_IWOTH)) < 0)
+        if(!XLOG_EXTERNAL_CONTROL_SUCCESS && LOGGER_SETTINGS.s_external_control.setup_failure_is_fatal)
         {
-            INTERNAL_ERRNO() << "; Failed to modify permissions for xlog socket";
-        }
-
-        if(atexit(call_exit) != 0)
-        {
-            INTERNAL() << "Failed to set atexit() for xlog";
-            return;
+            // TODO - Probably a better way to do this
+            exit(1);
         }
 #endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
     }
@@ -170,11 +240,14 @@ void XLog::InitializeLogging()
 void XLog::ShutownLogging(int signal)
 {
 #ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
-    if(ServerPointer)
+    if(LOGGER_SETTINGS.s_external_control.enabled)
     {
-        ServerPointer->Shutdown();
+        if(ServerPointer)
+        {
+            ServerPointer->Shutdown();
+        }
+        TRY_SHUTDOWN_THIS_PROGRAM_SOCKET();
     }
-    TRY_SHUTDOWN_THIS_PROGRAM_SOCKET();
 #endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
 }
 

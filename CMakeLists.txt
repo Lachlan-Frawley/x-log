@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
-project(xlog VERSION 0.2.0 LANGUAGES CXX)
+project(xlog VERSION 0.3.0 LANGUAGES CXX)
 
 option(ENABLE_EXTERNAL_LOG_CONTROL "Allow external programs to manage runtime logging by connecting to a Unix socket" ON)
 option(USE_SOURCE_LOCATION "If available, include source location in some logging commands" ON)
+option(USE_SYSLOG_LOG "Enable logging using syslog" ON)
+option(USE_JOURNAL_LOG "Enable logging using journald" ON)
 
 if(ENABLE_EXTERNAL_LOG_CONTROL)
 	add_compile_definitions(XLOG_ENABLE_EXTERNAL_LOG_CONTROL)
@@ -11,6 +13,14 @@ endif(ENABLE_EXTERNAL_LOG_CONTROL)
 if(USE_SOURCE_LOCATION)
 	add_compile_definitions(XLOG_USE_SOURCE_LOCATION_IF_AVAILABLE)
 endif(USE_SOURCE_LOCATION)
+
+if(USE_SYSLOG_LOG)
+	add_compile_definitions(XLOG_USE_SYSLOG_LOG)
+endif(USE_SYSLOG_LOG)
+
+if(USE_JOURNAL_LOG)
+	add_compile_definitions(XLOG_USE_JOURNAL_LOG)
+endif(USE_JOURNAL_LOG)
 
 set(CMAKE_CXX_STANDARD 17)
 if("cxx_std_20" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
@@ -36,8 +46,6 @@ set(TEST_SOURCE_FILES test_program.cpp)
 set(EXPORT_HEADERS xlog.h)
 
 if(ENABLE_EXTERNAL_LOG_CONTROL)
-	add_compile_definitions(XLOG_ENABLE_EXTERNAL_LOG_CONTROL)
-
 	find_package(Protobuf REQUIRED)
 	find_package(gRPC CONFIG REQUIRED)
 

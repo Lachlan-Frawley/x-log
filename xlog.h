@@ -17,14 +17,66 @@
 
 #include <fmt/core.h>
 
-#ifdef __cpp_lib_source_location
 #ifdef XLOG_USE_SOURCE_LOCATION_IF_AVAILABLE
+#ifdef __cpp_lib_source_location
 
 #define XLOG_LOGGING_USE_SOURCE_LOCATION
 #include <source_location>
 
+#else
+#pragma message("XLOG: Source location logging is enabled, however the source location feature does not appear to be available")
 #endif
 #endif
+
+#ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
+
+namespace XLog
+{
+    struct ExternalLogControlSettings
+    {
+        // Is external log control enabled at runtime?
+        bool enabled = true;
+
+        // Is the log socket modified so that anyone can connect to it?
+        bool allow_anyone_access = true;
+
+        // Is failure to setup the log socket fatal to the application?
+        bool setup_failure_is_fatal = false;
+    };
+}
+
+#endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
+
+#ifdef XLOG_USE_SYSLOG_LOG
+
+#include <boost/log/sinks/syslog_constants.hpp>
+
+namespace XLog
+{
+    struct SyslogSettings
+    {
+        // Is syslog logging enabled at runtime?
+        bool enabled = true;
+
+        // Syslog facility
+        boost::log::sinks::syslog::facility facility = boost::log::sinks::syslog::facility::user;
+    };
+}
+
+#endif // XLOG_USE_SYSLOG_LOG
+
+#ifdef XLOG_USE_JOURNAL_LOG
+
+namespace XLog
+{
+    struct JournalSettings
+    {
+        // Is journal logging enabled at runtime?
+        bool enabled = true;
+    };
+}
+
+#endif // XLOG_USE_JOURNAL_LOG
 
 namespace XLog
 {
@@ -60,11 +112,27 @@ namespace XLog
         INTERNAL // For xlog itself, can never be disabled (knowing why your logger failed is *really* important)
     };
 
+    struct LogSettings
+    {
+        Severity s_default_level = Severity::INFO;
+
+#ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
+        ExternalLogControlSettings s_external_control;
+#endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
+#ifdef XLOG_USE_SYSLOG_LOG
+        SyslogSettings s_syslog;
+#endif // XLOG_USE_SYSLOG_LOG
+#ifdef XLOG_USE_JOURNAL_LOG
+        JournalSettings s_journal;
+#endif // XLOG_USE_JOURNAL_LOG
+    };
+
     typedef boost::log::sources::severity_channel_logger_mt<Severity, std::string> LoggerType;
 
     std::string GetSeverityString(Severity sev) noexcept;
     LoggerType& GetNamedLogger(const std::string_view channel) noexcept;
-    void InitializeLogging();
+
+    void InitializeLogging(LogSettings settings);
     void ShutownLogging(int signal = -1);
 
     void SetGlobalLoggingLevel(Severity sev);
@@ -78,6 +146,7 @@ namespace XLog
 }
 
 // Set attribute and return the new value
+// Pretty sure I found this on stackoverflow, but can't recall where
 template<typename ValueType>
 ValueType set_get_attrib(const char* name, ValueType value) {
     auto attr = boost::log::attribute_cast<boost::log::attributes::mutable_constant<ValueType>>(boost::log::core::get()->get_global_attributes()[name]);

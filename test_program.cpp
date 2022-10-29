@@ -56,7 +56,27 @@ XLog::Severity get_next(XLog::Severity given)
 
 int main(int argc, char** argv)
 {
-    XLog::InitializeLogging();
+    XLog::LogSettings settings
+    {
+        .s_default_level = XLog::Severity::INFO,
+        .s_external_control =
+        {
+            .enabled = true,
+            .allow_anyone_access = true,
+            .setup_failure_is_fatal = true
+        },
+        .s_syslog =
+        {
+            .enabled = true,
+            .facility = boost::log::sinks::syslog::facility::user
+        },
+        .s_journal =
+        {
+            .enabled = true
+        }
+    };
+
+    XLog::InitializeLogging(settings);
 
     // Setup our signals
     setup_signal(SIGINT);
