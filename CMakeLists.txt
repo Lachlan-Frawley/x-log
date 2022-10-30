@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 project(xlog VERSION 0.3.0 LANGUAGES CXX)
 
-option(ENABLE_EXTERNAL_LOG_CONTROL "Allow external programs to manage runtime logging by connecting to a Unix socket" ON)
+option(ENABLE_EXTERNAL_LOG_CONTROL "Allow external programs to manage runtime logging by connecting to a Unix socket" OFF)
 option(USE_SOURCE_LOCATION "If available, include source location in some logging commands" ON)
-option(USE_SYSLOG_LOG "Enable logging using syslog" ON)
-option(USE_JOURNAL_LOG "Enable logging using journald" ON)
+option(USE_SYSLOG_LOG "Enable logging using syslog" OFF)
+option(USE_JOURNAL_LOG "Enable logging using journald" OFF)
 
 if(ENABLE_EXTERNAL_LOG_CONTROL)
 	add_compile_definitions(XLOG_ENABLE_EXTERNAL_LOG_CONTROL)

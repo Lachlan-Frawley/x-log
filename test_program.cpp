@@ -59,21 +59,27 @@ int main(int argc, char** argv)
     XLog::LogSettings settings
     {
         .s_default_level = XLog::Severity::INFO,
+#ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
         .s_external_control =
         {
             .enabled = true,
             .allow_anyone_access = true,
             .setup_failure_is_fatal = true
         },
+#endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
+#ifdef XLOG_USE_SYSLOG_LOG
         .s_syslog =
         {
             .enabled = true,
             .facility = boost::log::sinks::syslog::facility::user
         },
+#endif // XLOG_USE_SYSLOG_LOG
+#ifdef XLOG_USE_JOURNAL_LOG
         .s_journal =
         {
             .enabled = true
-        }
+        },
+#endif // XLOG_USE_JOURNAL_LOG
     };
 
     XLog::InitializeLogging(settings);
