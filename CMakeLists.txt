@@ -48,11 +48,8 @@ set(TEST_SOURCE_FILES test_program.cpp)
 set(EXPORT_HEADERS xlog.h)
 
 if(USE_JOURNAL_LOG)
-	find_package(PkgConfig REQUIRED)
-	pkg_check_modules(libsystemd REQUIRED IMPORTED_TARGET libsystemd)
-
 	set(LIB_SOURCE_FILES ${LIB_SOURCE_FILES} xlog_journal.cpp)
-	set(LIBRARIES ${LIBRARIES} PkgConfig::libsystemd)
+	set(LIBRARIES ${LIBRARIES} systemd)
 endif(USE_JOURNAL_LOG)
 
 if(ENABLE_EXTERNAL_LOG_CONTROL)
