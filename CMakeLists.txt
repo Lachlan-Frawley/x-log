@@ -6,6 +6,8 @@ option(USE_SOURCE_LOCATION "If available, include source location in some loggin
 option(USE_SYSLOG_LOG "Enable logging using syslog" OFF)
 option(USE_JOURNAL_LOG "Enable logging using journald" OFF)
 
+option(BUILD_TEST_PROGRAM "Build testing program" ON)
+
 if(ENABLE_EXTERNAL_LOG_CONTROL)
 	add_compile_definitions(XLOG_ENABLE_EXTERNAL_LOG_CONTROL)
 endif(ENABLE_EXTERNAL_LOG_CONTROL)
@@ -92,13 +94,18 @@ target_link_libraries(xlog-shared PUBLIC ${LIBRARIES})
 add_library(xlog STATIC ${LIB_SOURCE_FILES})
 target_link_libraries(xlog PUBLIC ${LIBRARIES})
 
-add_executable(xlog-test ${TEST_SOURCE_FILES})
-target_link_libraries(xlog-test PUBLIC xlog)
+if(BUILD_TEST_PROGRAM)
+	add_executable(xlog-test ${TEST_SOURCE_FILES})
+	target_link_libraries(xlog-test PUBLIC xlog)
+endif(BUILD_TEST_PROGRAM)
 
 if(ENABLE_EXTERNAL_LOG_CONTROL)
 	target_include_directories(xlog-shared PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 	target_include_directories(xlog PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-	target_include_directories(xlog-test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
+	if(BUILD_TEST_PROGRAM)
+		target_include_directories(xlog-test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+	endif(BUILD_TEST_PROGRAM)
 
 	find_package(cli REQUIRED)
 	find_package(CLI11 REQUIRED)
