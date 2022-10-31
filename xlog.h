@@ -132,7 +132,7 @@ namespace XLog
     std::string GetSeverityString(Severity sev) noexcept;
     LoggerType& GetNamedLogger(const std::string_view channel) noexcept;
 
-    void InitializeLogging(LogSettings settings);
+    void InitializeLogging(LogSettings settings = {});
     void ShutownLogging(int signal = -1);
 
     void SetGlobalLoggingLevel(Severity sev);
