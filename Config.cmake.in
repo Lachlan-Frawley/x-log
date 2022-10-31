@@ -4,6 +4,18 @@ include(CMakeFindDependencyMacro)
 find_dependency(fmt REQUIRED)
 find_dependency(Boost REQUIRED COMPONENTS log)
 
+if(ENABLE_EXTERNAL_LOG_CONTROL)
+    find_dependency(Protobuf REQUIRED)
+    find_dependency(gRPC CONFIG REQUIRED)
+
+    find_dependency(cli REQUIRED)
+    find_dependency(CLI11 REQUIRED)
+endif(ENABLE_EXTERNAL_LOG_CONTROL)
+
+if(USE_JOURNAL_LOG)
+    find_dependency(PkgConfig REQUIRED)
+endif(USE_JOURNAL_LOG)
+
 get_filename_component(SELF_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(${SELF_DIR}/xlog.cmake)
 
