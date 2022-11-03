@@ -8,20 +8,34 @@ option(USE_JOURNAL_LOG "Enable logging using journald" OFF)
 
 option(BUILD_TEST_PROGRAM "Build testing program" ON)
 
+set(SET_OPTS)
+
 if(ENABLE_EXTERNAL_LOG_CONTROL)
 	add_compile_definitions(XLOG_ENABLE_EXTERNAL_LOG_CONTROL)
+	set(SET_OPTS
+"${SET_OPTS}
+set(XLOG_ENABLE_EXTERNAL_LOG_CONTROL ON)")
 endif(ENABLE_EXTERNAL_LOG_CONTROL)
 
 if(USE_SOURCE_LOCATION)
 	add_compile_definitions(XLOG_USE_SOURCE_LOCATION_IF_AVAILABLE)
+	set(SET_OPTS
+"${SET_OPTS}
+set(XLOG_USE_SOURCE_LOCATION_IF_AVAILABLE ON)")
 endif(USE_SOURCE_LOCATION)
 
 if(USE_SYSLOG_LOG)
 	add_compile_definitions(XLOG_USE_SYSLOG_LOG)
+	set(SET_OPTS
+"${SET_OPTS}
+set(XLOG_USE_SYSLOG_LOG ON)")
 endif(USE_SYSLOG_LOG)
 
 if(USE_JOURNAL_LOG)
 	add_compile_definitions(XLOG_USE_JOURNAL_LOG)
+	set(SET_OPTS
+"${SET_OPTS}
+set(XLOG_USE_JOURNAL_LOG ON)")
 endif(USE_JOURNAL_LOG)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -130,9 +144,14 @@ install(
 )
 
 include(CMakePackageConfigHelpers)
-configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
-  "${CMAKE_CURRENT_BINARY_DIR}/xlog-config.cmake"
-  INSTALL_DESTINATION "${project_lib_dest}"
+configure_package_config_file(
+	"${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in"
+	"${CMAKE_CURRENT_BINARY_DIR}/xlog-config.cmake"
+	INSTALL_DESTINATION "${project_lib_dest}"
 )
+
+file(READ "${CMAKE_CURRENT_BINARY_DIR}/xlog-config.cmake" CONFIG_CONTENTS)
+string(REPLACE "__INSERT_SET_OPTIONS__" "${SET_OPTS}" CONFIG_CONTENTS "${CONFIG_CONTENTS}")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/xlog-config.cmake" "${CONFIG_CONTENTS}")
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/xlog-config.cmake DESTINATION "${project_lib_dest}")

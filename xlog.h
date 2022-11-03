@@ -23,8 +23,6 @@
 #define XLOG_LOGGING_USE_SOURCE_LOCATION
 #include <source_location>
 
-#else
-#pragma message("XLOG: Source location logging is enabled, however the source location feature does not appear to be available")
 #endif
 #endif
 
