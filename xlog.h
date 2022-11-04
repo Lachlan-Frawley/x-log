@@ -1,10 +1,10 @@
 #pragma once
 
-#ifndef _XLOG_H
-#define _XLOG_H
+#ifndef XLOG_H
+#define XLOG_H
 
-#include <errno.h>
-#include <string.h>
+#include <cerrno>
+#include <cstring>
 
 #include <string>
 #include <stdexcept>
@@ -76,6 +76,21 @@ namespace XLog
 
 #endif // XLOG_USE_JOURNAL_LOG
 
+#ifdef XLOG_USE_SIGCPP
+
+namespace XLog
+{
+    struct SignalSettings
+    {
+        // Should xlog initialize sigcpp itself?
+        // This makes the most sense if you include it as a convenient dependency, and not for your own use
+        // Additionally, sigcpp will be initialized with its default settings
+        bool initialize_in_xlog = true;
+    };
+}
+
+#endif // XLOG_USE_SIGCPP
+
 namespace XLog
 {
     /*
@@ -123,21 +138,24 @@ namespace XLog
 #ifdef XLOG_USE_JOURNAL_LOG
         JournalSettings s_journal;
 #endif // XLOG_USE_JOURNAL_LOG
+#ifdef XLOG_USE_SIGCPP
+        SignalSettings s_signal;
+#endif // XLOG_USE_SIGCPP
     };
 
     typedef boost::log::sources::severity_channel_logger_mt<Severity, std::string> LoggerType;
 
     std::string GetSeverityString(Severity sev) noexcept;
-    LoggerType& GetNamedLogger(const std::string_view channel) noexcept;
+    LoggerType& GetNamedLogger(std::string_view channel) noexcept;
 
     void InitializeLogging(LogSettings settings = {});
     void ShutownLogging(int signal = -1);
 
     void SetGlobalLoggingLevel(Severity sev);
-    bool SetLoggingLevel(Severity sev, const std::string_view channel);
+    bool SetLoggingLevel(Severity sev, std::string_view channel);
 
     Severity GetGlobalLoggingLevel();
-    Severity GetLoggingLevel(const std::string_view channel);
+    Severity GetLoggingLevel(std::string_view channel);
 
     std::unordered_map<std::string, Severity> GetAllLoggingLevels();
     std::vector<std::string> GetAllLogHandles();
@@ -355,4 +373,4 @@ namespace XLog
     };
 }
 
-#endif // _XLOG_H
+#endif // XLOG_H

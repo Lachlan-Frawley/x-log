@@ -34,6 +34,10 @@ static boost::log::sinks::syslog::custom_severity_mapping<XLog::Severity> SYSLOG
 static boost::shared_ptr<boost::log::sinks::synchronous_sink<xlog_journal_backend>> JOURNAL_BACKEND_PTR;
 #endif // XLOG_USE_JOURNAL_LOG
 
+#ifdef XLOG_USE_SIGCPP
+#include <sigcpp/sig.h>
+#endif
+
 #include "xlog_log_internal.noexport.h"
 
 typedef boost::log::expressions::channel_severity_filter_actor<std::string, XLog::Severity> min_severity_filter;
@@ -152,6 +156,19 @@ void XLog::InitializeLogging(LogSettings settings)
 
         boost::log::add_console_log(std::clog, boost::log::keywords::format = &XLogFormatters::default_formatter);
 
+        if(atexit(call_exit) != 0)
+        {
+            INTERNAL() << "Failed to set atexit() for xlog";
+        }
+
+#ifdef XLOG_USE_SIGCPP
+        sig::push_signal_handler(XLog::ShutownLogging, { sig::FATAL_SIGNALS.begin(), sig::FATAL_SIGNALS.end() });
+        if(LOGGER_SETTINGS.s_signal.initialize_in_xlog)
+        {
+            sig::initialize();
+        }
+#endif
+
 #ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
         boost::log::core::get()->add_global_attribute("SourceLocation", boost::log::attributes::mutable_constant<std::source_location>(std::source_location::current()));
 #endif
@@ -232,12 +249,6 @@ void XLog::InitializeLogging(LogSettings settings)
                         break;
                     }
                 }
-            }
-
-            if(atexit(call_exit) != 0)
-            {
-                INTERNAL() << "Failed to set atexit() for xlog";
-                break;
             }
 
             XLOG_EXTERNAL_CONTROL_SUCCESS = true;

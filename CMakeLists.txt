@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.16)
-project(xlog VERSION 0.3.0 LANGUAGES CXX)
+project(xlog VERSION 0.4.0 LANGUAGES CXX)
 
 option(ENABLE_EXTERNAL_LOG_CONTROL "Allow external programs to manage runtime logging by connecting to a Unix socket" OFF)
 option(USE_SOURCE_LOCATION "If available, include source location in some logging commands" ON)
 option(USE_SYSLOG_LOG "Enable logging using syslog" OFF)
 option(USE_JOURNAL_LOG "Enable logging using journald" OFF)
+option(USE_SIGCPP "Enable sig-cpp support" ON)
 
 option(BUILD_TEST_PROGRAM "Build testing program" ON)
 
@@ -38,6 +39,13 @@ if(USE_JOURNAL_LOG)
 set(XLOG_USE_JOURNAL_LOG ON)")
 endif(USE_JOURNAL_LOG)
 
+if(USE_SIGCPP)
+	add_compile_definitions(XLOG_USE_SIGCPP)
+	set(SET_OPTS
+		"${SET_OPTS}
+set(XLOG_USE_SIGCPP ON)")
+endif(USE_SIGCPP)
+
 set(CMAKE_CXX_STANDARD 17)
 if("cxx_std_20" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
 	message("C++ 20 support detected")
@@ -65,6 +73,11 @@ if(USE_JOURNAL_LOG)
 	set(LIB_SOURCE_FILES ${LIB_SOURCE_FILES} xlog_journal.cpp)
 	set(LIBRARIES ${LIBRARIES} systemd)
 endif(USE_JOURNAL_LOG)
+
+if(USE_SIGCPP)
+	find_package(sigcpp REQUIRED)
+	set(LIBRARIES ${LIBRARIES} sigcpp::sigcpp)
+endif(USE_SIGCPP)
 
 if(ENABLE_EXTERNAL_LOG_CONTROL)
 	find_package(Protobuf REQUIRED)
