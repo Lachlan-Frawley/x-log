@@ -1,8 +1,7 @@
 #include "xlog.h"
-GET_LOGGER("Test Program")
+XLOG_GET_LOGGER("Test Program")
 
 #include <thread>
-#include <iostream>
 
 // Custom log macro to make life a little easier
 #define LOG_AT(sev) CUSTOM_LOG_SEV(__logger, sev) << "Logging @ " << XLog::GetSeverityString(sev)
@@ -70,6 +69,10 @@ int main(int argc, char** argv)
     };
 
     XLog::InitializeLogging(settings);
+
+    XLOG_INFO << "Hello World!";
+
+    XLOG_FATAL_F("Goodbye {0}", "World!");
 
     // Loop over each level every second
     auto current_sev = XLog::Severity::INFO;
