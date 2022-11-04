@@ -5,7 +5,7 @@ option(ENABLE_EXTERNAL_LOG_CONTROL "Allow external programs to manage runtime lo
 option(USE_SOURCE_LOCATION "If available, include source location in some logging commands" ON)
 option(USE_SYSLOG_LOG "Enable logging using syslog" OFF)
 option(USE_JOURNAL_LOG "Enable logging using journald" OFF)
-option(USE_SIGCPP "Enable sig-cpp support" ON)
+option(USE_SIGCPP "Enable sig-cpp support" OFF)
 
 option(BUILD_TEST_PROGRAM "Build testing program" ON)
 

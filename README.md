@@ -8,9 +8,10 @@ I wrote xlog as a simple and extendable logging mechanism for a long forgotten p
 - Boost Log v2 (not sure how early a version you can get away with, minimum I've tried is 1.72)
 - libfmt
 - Protobuf & gRPC (if external log control is enabled)
+- sigcpp (if enabled)
 
 # Notes
-- Logs to std::clog
+- Logs to std::clog, syslog, or journal
 - Can be used in a multi-threaded environment
 - Has its own exception that writes to the log (and includes source location)
 - Not tested in an exception-less environment
@@ -18,22 +19,48 @@ I wrote xlog as a simple and extendable logging mechanism for a long forgotten p
 # CMake Default Options
 - ```-DENABLE_EXTERNAL_LOG_CONTROL=OFF```, when set to ```ON```, enables external log management (requires gRPC, Protobuf)
 - ```-DUSE_SOURCE_LOCATION=ON```, If C++20 support is available, this enables logging source location for some log lines
+- ```-DUSE_SYSLOG_LOG=OFF```, Enable logging to syslog
+- ```-DUSE_JOURNAL_LOG=OFF```, Enable logging to journald
+- ```-DUSE_SIGCPP=OFF```, Use Sigcpp (another of my projects) for signal management to allow automatic closure of the external control socket
 
 # Features I want to add
-- Normal log macros that use string formatting rather than streams
-- Code/Errno macros that use formatting rather than streams
-- Log to syslog or journal
 - Log to files
 - Add instance loggers (i.e. named instances)
 - Allow adding and removing log sinks via external management
 - Add checks for exceptions and handle FATAL() macros differently if they are disabled
-- Expand CODE_SEV(code) macros to give more information
-- Expand ERRNO_SEV() macros to give more information
 - Test in more environments
 - Automated testing
 
+## Syslog & Journal Logging
+Both disabled by default, enable via:
+
+```-DUSE_SYSLOG_LOG=ON```
+
+and
+
+```-DUSE_JOURNAL_LOG=ON```
+
+## External Log Control
+Sometimes we want to be able to control logging without having to restart the program, and since xlog allows runtime changing of the log levels, it seems reasonable to have some kind of method to connect to a program that is running and edit its logging configuration.
+
+To accomplish this we create a Unix socket like so: ```/tmp/xlog/${PID}-${PROGNAME}.socket```, now an external program can connect and manipulate the programs log settings.
+
+To facilitate this, a gRPC interface exists which defines how the external program must communicate with the xlog instance running inside the target. To install gRPC, follow the instructuctions here: https://grpc.io/docs/languages/cpp/quickstart
+
+This is disabled by default and can be enabled like so via CMake:
+
+```-DENABLE_EXTERNAL_LOG_CONTROL=ON```
+
+## Sigcpp Integration
+Sigcpp is another project I wrote to (ideally) make it easier to manage signals and allow multiple locations to add callbacks on signals (to allow cleanups and so on). Sigcpp can be used here to automatically close external log control sockets (if enabled)
+
+
+Sigcpp is disabled by default and can be enabled like so via CMake:
+
+```-DUSE_SIGCPP=ON```
+
 # How to use
-Pretty much all of the logging macros look for a special named variable which is filled in by the ```GET_LOGGER(name)``` macro. This macro is meant to be used in a source file, but can be used in other places (i.e. functions), but this can lead to some interesting behaviour, so just put it in your source file for now (there are other mechanisms to log without using this macro).
+Pretty much all of the logging macros look for a special named variable which is filled in by the ```XLOG_GET_LOGGER(name)``` macro. This macro is meant to be used in a source file, but can be used in other places (i.e. functions), but this can lead to some interesting behaviour, so just put it in your source file for now (there are other mechanisms to log without using this macro).
 
 ## Severity Levels
 There are a few severity levels and while they pretty much behave the way you'd expect, it's still worth going over.
@@ -50,124 +77,42 @@ INTERNAL    // Used by xlog as the internal log level (can never be disabled)
 ```
 Log levels with a '2' in their name will not log source location (with the exception of INFO, which never logs source locations). The source location sent to the log is stripped down slightly, only showing the offending function, file (path stripped), and line number.
 
-## External Log Control
-Sometimes we want to be able to control logging without having to restart the program, and since xlog allows runtime changing of the log levels, it seems reasonable to have some kind of method to connect to a program that is running and edit its logging configuration.
+## Logging
+```c++
+XLOG_<LEVEL> // Works with stream operator '<<'
+XLOG_<LEVEL>_<QUALIFIER> // Qualifiers modify the behaviour of the macro
 
-To accomplish this we create a Unix socket like so: ```/tmp/xlog/${PID}-${PROGNAME}.socket```, now an external program can connect and manipulate the programs log settings.
+// Qualifiers
+XLOG_<LEVEL>_I(name) // Inplace logging, i.e. takes a name and can be used in headers
 
-To facilitate this, a gRPC interface exists which defines how the external program must communicate with the xlog instance running inside the target. To install gRPC, follow the instructuctions here: https://grpc.io/docs/languages/cpp/quickstart
+XLOG_<LEVEL>_F(fmat, ...) // Formatted logging, still technically a stream so you can use '<<' after
 
-This is disabled by default and can be enabled like so via CMake:
+XLOG_<LEVEL>_C(err) // Error code logging, can take std::error_code, or boost::system::error_code
 
-```-DENABLE_EXTERNAL_LOG_CONTROL=ON```
+XLOG_<LEVEL>_E // ERRNO logging
 
-## Normal Logging
-```
-LOG_INFO()
-LOG_DEBUG()
-LOG_DEBUG2()
-LOG_WARN()
-LOG_WARN2()
-LOG_ERROR()
-LOG_ERROR2()
-```
-These are macros are used to write to the log using the C++ stream operator:
-```
-LOG_WARN2() << "If source location is enabled, I write a warning without the source location it it!" << std::endl;
-```
+// Qualifiers can be combined, for example:
+XLOG_<LEVEL>_IFC(name, err, fmt, ...) // Inplace, formated, error code logging
 
-## Error Codes
-If you are an avid user of Boost, or happen to use ```std::error_code```, then you might want to log it without having to expand out the data wrapped in it every single time. 
-```
-CODE_INFO(errc)
-CODE_DEBUG(errc)
-CODE_DEBUG2(errc)
-CODE_WARN(errc)
-CODE_WARN2(errc)
-CODE_ERROR(errc)
-CODE_ERROR2(errc)
-```
-These macros expand to:
-```
-CODE_<SERVERITY>(errc) LOG_<SEVERITY>() << ERRC_STREAM(errc)
-```
-Where ```ERRC_STREAM(errc)``` is another macro that can be modified however you like to print out the information wrapped up in the object. By default the macro only logs the message of the error code.
+// Precedence -> Inplace 'I' > Formatted 'F' > ERRNO 'E' & Error Code 'C'
+// Obviously ERRNO and Error Code can't be combined
 
-## ERRNO Logging
-Sometimes we have to interface with linux kernel code which uses ```errno``` to express errors. Having to extract the string value for a given error number and log it would be a pain, so there are some macros to make life a bit easier.
-```
-ERRNO_INFO()
-ERRNO_DEBUG()
-ERRNO_DEBUG2()
-ERRNO_WARN()
-ERRNO_WARN2()
-ERRNO_ERROR()
-ERRNO_ERROR2()
-```
-These macros expand similar to the error code macros:
-```
-ERRNO_<SEVERITY>() LOG_<SEVERITY>() << ERRNO_STREAM
-```
-Where ```ERRNO_STREAM``` is another customiseable macro. Currently, it calls a function name ```get_errno_string()``` which returns the error string through ```strerror_r``` (which is thread safe), but of course, this could be changed if you want to.
+// <LEVEL>'s with a 2 in their name do not log source locations (if enabled)
+LOG_WARN2() << "If source location is enabled, I write a warning without the source location in it!";
 
-## Fatal Logging
-Despite there being a fatal severity, there is no ```LOG_FATAL()```, why is that? Well because the fatal severity is expressed as an exception (currently!!! subject to change maybe). There are a few macros used for this:
-```
-FATAL(msg)
-FATAL_FMT(fmt, ...)
-CODE_FATAL(errc)
-ERRNO_FATAL()
-```
-As well as some utilities that log fatal to the global logger:
-```
-FATAL_GLOBAL(msg)
-FATAL_GLOBAL_FMT(fmt, ...)
-CODE_FATAL_GLOBAL(errc)
-ERRNO_FATAL_GLOBAL()
-```
-These all essentially throw an exception, and of course the fatal versions of the previous log types use customiseable macros to express their messages; these are however, not the *same* customiseable macros:
-```
-// For error codes (default)
-ERRC_MSG(errc) errc.message()
+// Fatal exceptions are pretty similar, however they cannot use the stream modifier
+XLOG_FATAL_<QUALIFIER>(*args*)
 
-// For ERRNO (default)
-ERRNO_MESSAGE() get_errno_string()
-```
-Because the argument to construct a fatal exception must be a string, we can't use the exact same macros, but these are both pretty similar to their stream-based counterparts.
+// The simplest being:
+XLOG_FATAL(msg)
 
-## Inplace/Named Logging
-Sometimes we might want to log in a header file (where using the ```GET_LOGGER``` macro would be disasterous!), or perhaps we want to use a different logger even though we've already defined one in our source file? Well then this is the solution to that problem:
-```
-// Normal Logging
-LOG_INFO_INPLACE(name)
-LOG_DEBUG_INPLACE(name)
-LOG_DEBUG2_INPLACE(name)
-LOG_WARN_INPLACE(name)
-LOG_WARN2_INPLACE(name)
-LOG_ERROR_INPLACE(name)
-LOG_ERROR2_INPLACE(name)
+// Fatal exceptions have an extra qualifier: GLOBAL
+// This logs to the named logger "Global"
+XLOG_FATAL_G(msg)
 
-// Error Codes
-CODE_INFO_INPLACE(name, errc)
-CODE_DEBUG_INPLACE(name, errc)
-CODE_DEBUG2_INPLACE(name, errc)
-CODE_WARN_INPLACE(name, errc)
-CODE_WARN2_INPLACE(name, errc)
-CODE_ERROR_INPLACE(name, errc)
-CODE_ERROR2_INPLACE(name, errc)
+// Qualifiers can still be combined, for example:
+XLOG_FATAL_FGE(fmat, ...) // Formatted, Global, ERRNO logging
 
-// ERRNO Logging
-ERRNO_INFO_INPLACE(name)
-ERRNO_DEBUG_INPLACE(name)
-ERRNO_DEBUG2_INPLACE(name)
-ERRNO_WARN_INPLACE(name)
-ERRNO_WARN2_INPLACE(name)
-ERRNO_ERROR_INPLACE(name)
-ERRNO_ERROR2_INPLACE(name)
-
-// Fatal Logging
-FATAL_NAMED(name, msg)
-FATAL_NAMED_FMT(name, fmt, ...)
-CODE_FATAL_NAMED(name, errc)
-ERRNO_FATAL_NAMED(name)
+// Precedence -> Inplace 'I' > Formatted 'F' > Global 'G' > ERRNO 'E' & Error Code 'C'
+// Inplace and Global are mutually exclusive
 ```
