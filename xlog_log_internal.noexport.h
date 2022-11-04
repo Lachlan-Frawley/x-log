@@ -2,9 +2,9 @@
 
 // This shouldn't be publicly visible
 static const std::string INTERNAL_LOGGER_NAME("xlog_internal");
-static XLog::LoggerType INTERNAL_LOGGER{boost::log::keywords::channel = INTERNAL_LOGGER_NAME};
+static xlog::LoggerType INTERNAL_LOGGER{boost::log::keywords::channel = INTERNAL_LOGGER_NAME};
 
-#define XLOG_INTERNAL CUSTOM_LOG_SEV(INTERNAL_LOGGER, XLog::Severity::INTERNAL)
+#define XLOG_INTERNAL CUSTOM_LOG_SEV(INTERNAL_LOGGER, xlog::Severity::INTERNAL)
 #define XLOG_INTERNAL_F(fmat, ...) XLOG_INTERNAL << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
 
 #define XLOG_INTERNAL_C(errc) XLOG_INTERNAL << XLOG_ERRC_VALUE(errc)

@@ -1,6 +1,6 @@
 #include "xlog.h"
 
-static XLog::LogSettings LOGGER_SETTINGS;
+static xlog::LogSettings LOGGER_SETTINGS;
 
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -12,7 +12,7 @@ static XLog::LogSettings LOGGER_SETTINGS;
 #include <boost/log/utility/setup.hpp>
 #include <boost/log/expressions/predicates/channel_severity_filter.hpp>
 
-BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", XLog::Severity)
+BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", xlog::Severity)
 BOOST_LOG_ATTRIBUTE_KEYWORD(channel, "Channel", std::string)
 
 #ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
@@ -26,7 +26,7 @@ static std::unique_ptr<grpc::Server> ServerPointer;
 #ifdef XLOG_USE_SYSLOG_LOG
 #include <boost/log/sinks/syslog_backend.hpp>
 static boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>> SYSLOG_BACKEND_PTR;
-static boost::log::sinks::syslog::custom_severity_mapping<XLog::Severity> SYSLOG_SEV_MAPPER("Severity");
+static boost::log::sinks::syslog::custom_severity_mapping<xlog::Severity> SYSLOG_SEV_MAPPER("Severity");
 #endif //XLOG_USE_SYSLOG_LOG
 
 #ifdef XLOG_USE_JOURNAL_LOG
@@ -40,7 +40,7 @@ static boost::shared_ptr<boost::log::sinks::synchronous_sink<xlog_journal_backen
 
 #include "xlog_log_internal.noexport.h"
 
-typedef boost::log::expressions::channel_severity_filter_actor<std::string, XLog::Severity> min_severity_filter;
+typedef boost::log::expressions::channel_severity_filter_actor<std::string, xlog::Severity> min_severity_filter;
 min_severity_filter& get_sev_filter()
 {
     static min_severity_filter filter = boost::log::expressions::channel_severity_filter(channel, severity);
@@ -49,16 +49,16 @@ min_severity_filter& get_sev_filter()
 
 struct LoggerInformation
 {
-    XLog::LoggerType logger;
+    xlog::LoggerType logger;
 
     std::string channel;
-    XLog::Severity severity;
+    xlog::Severity severity;
 };
 
-typedef std::unordered_map<std::string, LoggerInformation, XLog::StringHash, std::equal_to<>> LoggerMap;
+typedef std::unordered_map<std::string, LoggerInformation, xlog::StringHash, std::equal_to<>> LoggerMap;
 static std::mutex _LoggerMutex;
 
-static std::atomic<XLog::Severity> DefaultSeverity = XLog::Severity::INFO;
+static std::atomic<xlog::Severity> DefaultSeverity = xlog::Severity::INFO;
 
 static LoggerMap& GetLoggerMap() noexcept
 {
@@ -68,7 +68,7 @@ static LoggerMap& GetLoggerMap() noexcept
 
 #define GET_LOGGER_MAP(varname) std::scoped_lock lock(_LoggerMutex); LoggerMap& varname = GetLoggerMap();
 
-std::string XLog::GetSeverityString(Severity sev) noexcept
+std::string xlog::GetSeverityString(Severity sev) noexcept
 {
     switch (sev)
     {
@@ -95,10 +95,10 @@ std::string XLog::GetSeverityString(Severity sev) noexcept
 // For atexit()
 void call_exit()
 {
-    XLog::ShutownLogging(-1);
+    xlog::ShutownLogging(-1);
 }
 
-XLog::LoggerType& XLog::GetNamedLogger(const std::string_view cnl) noexcept
+xlog::LoggerType& xlog::GetNamedLogger(const std::string_view cnl) noexcept
 {
     if(cnl.compare(INTERNAL_LOGGER_NAME) == 0)
     {
@@ -142,7 +142,7 @@ XLog::LoggerType& XLog::GetNamedLogger(const std::string_view cnl) noexcept
     }
 }
 
-void XLog::InitializeLogging(LogSettings settings)
+void xlog::InitializeLogging(LogSettings settings)
 {
     static bool isInitialized = false;
 
@@ -154,7 +154,7 @@ void XLog::InitializeLogging(LogSettings settings)
             DefaultSeverity.store(LOGGER_SETTINGS.s_default_level);
         }
 
-        boost::log::add_console_log(std::clog, boost::log::keywords::format = &XLogFormatters::default_formatter);
+        boost::log::add_console_log(std::clog, boost::log::keywords::format = &xlogFormatters::default_formatter);
 
 #ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
         boost::log::core::get()->add_global_attribute("SourceLocation", boost::log::attributes::mutable_constant<std::source_location>(std::source_location::current()));
@@ -167,7 +167,7 @@ void XLog::InitializeLogging(LogSettings settings)
         }
 
 #ifdef XLOG_USE_SIGCPP
-        sig::push_signal_handler(XLog::ShutownLogging, { sig::FATAL_SIGNALS.begin(), sig::FATAL_SIGNALS.end() });
+        sig::push_signal_handler(xlog::ShutownLogging, { sig::FATAL_SIGNALS.begin(), sig::FATAL_SIGNALS.end() });
         if(LOGGER_SETTINGS.s_signal.initialize_in_xlog)
         {
             sig::initialize();
@@ -183,19 +183,19 @@ void XLog::InitializeLogging(LogSettings settings)
     #endif // BOOST_LOG_USE_NATIVE_SYSLOG
         if(LOGGER_SETTINGS.s_syslog.enabled)
         {
-            SYSLOG_SEV_MAPPER[XLog::Severity::INFO] = boost::log::sinks::syslog::level::debug;
-            SYSLOG_SEV_MAPPER[XLog::Severity::DEBUG] = boost::log::sinks::syslog::level::info;
-            SYSLOG_SEV_MAPPER[XLog::Severity::DEBUG2] = boost::log::sinks::syslog::level::info;
-            SYSLOG_SEV_MAPPER[XLog::Severity::WARNING] = boost::log::sinks::syslog::level::warning;
-            SYSLOG_SEV_MAPPER[XLog::Severity::WARNING2] = boost::log::sinks::syslog::level::warning;
-            SYSLOG_SEV_MAPPER[XLog::Severity::ERROR] = boost::log::sinks::syslog::level::error;
-            SYSLOG_SEV_MAPPER[XLog::Severity::ERROR2] = boost::log::sinks::syslog::level::error;
-            SYSLOG_SEV_MAPPER[XLog::Severity::FATAL] = boost::log::sinks::syslog::level::critical;
-            SYSLOG_SEV_MAPPER[XLog::Severity::INTERNAL] = boost::log::sinks::syslog::level::alert;
+            SYSLOG_SEV_MAPPER[xlog::Severity::INFO] = boost::log::sinks::syslog::level::debug;
+            SYSLOG_SEV_MAPPER[xlog::Severity::DEBUG] = boost::log::sinks::syslog::level::info;
+            SYSLOG_SEV_MAPPER[xlog::Severity::DEBUG2] = boost::log::sinks::syslog::level::info;
+            SYSLOG_SEV_MAPPER[xlog::Severity::WARNING] = boost::log::sinks::syslog::level::warning;
+            SYSLOG_SEV_MAPPER[xlog::Severity::WARNING2] = boost::log::sinks::syslog::level::warning;
+            SYSLOG_SEV_MAPPER[xlog::Severity::ERROR] = boost::log::sinks::syslog::level::error;
+            SYSLOG_SEV_MAPPER[xlog::Severity::ERROR2] = boost::log::sinks::syslog::level::error;
+            SYSLOG_SEV_MAPPER[xlog::Severity::FATAL] = boost::log::sinks::syslog::level::critical;
+            SYSLOG_SEV_MAPPER[xlog::Severity::INTERNAL] = boost::log::sinks::syslog::level::alert;
 
             SYSLOG_BACKEND_PTR = boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>>(new boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>(_XLOG_SET_IMPL, boost::log::keywords::facility = LOGGER_SETTINGS.s_syslog.facility));
             SYSLOG_BACKEND_PTR->locked_backend()->set_severity_mapper(SYSLOG_SEV_MAPPER);
-            SYSLOG_BACKEND_PTR->set_formatter(&XLogFormatters::default_formatter);
+            SYSLOG_BACKEND_PTR->set_formatter(&xlogFormatters::default_formatter);
 
             boost::log::core::get()->add_sink(SYSLOG_BACKEND_PTR);
             XLOG_INTERNAL << "Added syslog backed";
@@ -264,7 +264,7 @@ void XLog::InitializeLogging(LogSettings settings)
     }
 }
 
-void XLog::ShutownLogging(int signal)
+void xlog::ShutownLogging(int signal)
 {
 #ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
     if(LOGGER_SETTINGS.s_external_control.enabled)
@@ -278,7 +278,7 @@ void XLog::ShutownLogging(int signal)
 #endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
 }
 
-void XLog::SetGlobalLoggingLevel(XLog::Severity sev)
+void xlog::SetGlobalLoggingLevel(xlog::Severity sev)
 {
     GET_LOGGER_MAP(all_loggers)
     DefaultSeverity.store(sev);
@@ -292,7 +292,7 @@ void XLog::SetGlobalLoggingLevel(XLog::Severity sev)
     boost::log::core::get()->set_filter(filter);
 }
 
-bool XLog::SetLoggingLevel(XLog::Severity sev, const std::string_view cnl)
+bool xlog::SetLoggingLevel(xlog::Severity sev, const std::string_view cnl)
 {
     GET_LOGGER_MAP(all_loggers)
 #if __cplusplus >= 202003L
@@ -317,12 +317,12 @@ bool XLog::SetLoggingLevel(XLog::Severity sev, const std::string_view cnl)
     }
 }
 
-XLog::Severity XLog::GetGlobalLoggingLevel()
+xlog::Severity xlog::GetGlobalLoggingLevel()
 {
     return DefaultSeverity;
 }
 
-XLog::Severity XLog::GetLoggingLevel(const std::string_view cnl)
+xlog::Severity xlog::GetLoggingLevel(const std::string_view cnl)
 {
     GET_LOGGER_MAP(all_loggers)
 
@@ -342,11 +342,11 @@ XLog::Severity XLog::GetLoggingLevel(const std::string_view cnl)
     }
 }
 
-std::unordered_map<std::string, XLog::Severity> XLog::GetAllLoggingLevels()
+std::unordered_map<std::string, xlog::Severity> xlog::GetAllLoggingLevels()
 {
     GET_LOGGER_MAP(all_loggers)
 
-    std::unordered_map<std::string, XLog::Severity> rValue;
+    std::unordered_map<std::string, xlog::Severity> rValue;
     for(const auto& [key, value] : all_loggers)
     {
         rValue[key] = value.severity;
@@ -355,7 +355,7 @@ std::unordered_map<std::string, XLog::Severity> XLog::GetAllLoggingLevels()
     return rValue;
 }
 
-std::vector<std::string> XLog::GetAllLogHandles()
+std::vector<std::string> xlog::GetAllLogHandles()
 {
     GET_LOGGER_MAP(all_loggers)
 
@@ -369,34 +369,34 @@ std::vector<std::string> XLog::GetAllLogHandles()
 }
 
 #ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-XLog::fatal_exception::fatal_exception(XLog::LoggerType& logger, const std::string& what_arg, const std::source_location sloc) : std::runtime_error(what_arg)
+xlog::fatal_exception::fatal_exception(xlog::LoggerType& logger, const std::string& what_arg, const std::source_location sloc) : std::runtime_error(what_arg)
 {
     print_fatal(logger, sloc);
 }
 
-XLog::fatal_exception::fatal_exception(XLog::LoggerType& logger, const char* what_arg, const std::source_location sloc) : std::runtime_error(what_arg)
+xlog::fatal_exception::fatal_exception(xlog::LoggerType& logger, const char* what_arg, const std::source_location sloc) : std::runtime_error(what_arg)
 {
     print_fatal(logger, sloc);
 }
 
-void XLog::fatal_exception::print_fatal(XLog::LoggerType& logger, const std::source_location sloc) const
+void xlog::fatal_exception::print_fatal(xlog::LoggerType& logger, const std::source_location sloc) const
 {
-    CUSTOM_LOG_SEV_SLOC(logger, XLog::Severity::FATAL, sloc) << what();
+    CUSTOM_LOG_SEV_SLOC(logger, xlog::Severity::FATAL, sloc) << what();
 }
 #else
-XLog::fatal_exception::fatal_exception(XLog::LoggerType& logger, const std::string& what_arg) : std::runtime_error(what_arg)
+xlog::fatal_exception::fatal_exception(xlog::LoggerType& logger, const std::string& what_arg) : std::runtime_error(what_arg)
 {
     print_fatal(logger);
 }
 
-XLog::fatal_exception::fatal_exception(XLog::LoggerType& logger, const char* what_arg) : std::runtime_error(what_arg)
+xlog::fatal_exception::fatal_exception(xlog::LoggerType& logger, const char* what_arg) : std::runtime_error(what_arg)
 {
     print_fatal(logger);
 }
 
-void XLog::fatal_exception::print_fatal(XLog::LoggerType& logger) const
+void xlog::fatal_exception::print_fatal(xlog::LoggerType& logger) const
 {
-    CUSTOM_LOG_SEV(logger, XLog::Severity::FATAL) << what();
+    CUSTOM_LOG_SEV(logger, xlog::Severity::FATAL) << what();
 }
 #endif
 
@@ -409,22 +409,22 @@ static std::string get_file_name(const std::string_view path)
     return std::filesystem::path(path).filename();
 }
 
-void XLogFormatters::default_formatter(const boost::log::record_view& rec, boost::log::formatting_ostream& stream)
+void xlogFormatters::default_formatter(const boost::log::record_view& rec, boost::log::formatting_ostream& stream)
 {
     auto timestamp = boost::log::extract<boost::posix_time::ptime>("TimeStamp", rec);
-    auto sev = boost::log::extract<XLog::Severity>("Severity", rec);
+    auto sev = boost::log::extract<xlog::Severity>("Severity", rec);
     auto cnl = boost::log::extract<std::string>("Channel", rec);
     auto message = boost::log::extract<std::string>("Message", rec);
 
     stream  << boost::posix_time::to_simple_string(timestamp.get()) << ' '
-            << '<' << XLog::GetSeverityString(sev.get()) << "> "
+            << '<' << xlog::GetSeverityString(sev.get()) << "> "
             << '[' << cnl.get() << "] - ";
 
 #ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-    if(sev != XLog::Severity::INFO &&
-       sev != XLog::Severity::DEBUG2 &&
-       sev != XLog::Severity::WARNING2 &&
-       sev != XLog::Severity::ERROR2)
+    if(sev != xlog::Severity::INFO &&
+       sev != xlog::Severity::DEBUG2 &&
+       sev != xlog::Severity::WARNING2 &&
+       sev != xlog::Severity::ERROR2)
     {
         auto slc = boost::log::extract<std::source_location>("SourceLocation", rec);
         if(slc.empty())

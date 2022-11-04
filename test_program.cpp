@@ -4,41 +4,41 @@ XLOG_GET_LOGGER("Test Program")
 #include <thread>
 
 // Custom log macro to make life a little easier
-#define LOG_AT(sev) CUSTOM_LOG_SEV(__logger, sev) << "Logging @ " << XLog::GetSeverityString(sev)
+#define LOG_AT(sev) CUSTOM_LOG_SEV(__logger, sev) << "Logging @ " << xlog::GetSeverityString(sev)
 
 // Semi 'state machine' to traverse log levels
-XLog::Severity get_next(XLog::Severity given)
+xlog::Severity get_next(xlog::Severity given)
 {
     switch(given)
     {
-        case XLog::Severity::INFO:
-            return XLog::Severity::DEBUG;
-        case XLog::Severity::DEBUG:
-            return XLog::Severity::DEBUG2;
-        case XLog::Severity::DEBUG2:
-            return XLog::Severity::WARNING;
-        case XLog::Severity::WARNING:
-            return XLog::Severity::WARNING2;
-        case XLog::Severity::WARNING2:
-            return XLog::Severity::ERROR;
-        case XLog::Severity::ERROR:
-            return XLog::Severity::ERROR2;
-        case XLog::Severity::ERROR2:
-            return XLog::Severity::FATAL;
-        case XLog::Severity::FATAL:
-            return XLog::Severity::INTERNAL;
-        case XLog::Severity::INTERNAL:
-            return XLog::Severity::INFO;
+        case xlog::Severity::INFO:
+            return xlog::Severity::DEBUG;
+        case xlog::Severity::DEBUG:
+            return xlog::Severity::DEBUG2;
+        case xlog::Severity::DEBUG2:
+            return xlog::Severity::WARNING;
+        case xlog::Severity::WARNING:
+            return xlog::Severity::WARNING2;
+        case xlog::Severity::WARNING2:
+            return xlog::Severity::ERROR;
+        case xlog::Severity::ERROR:
+            return xlog::Severity::ERROR2;
+        case xlog::Severity::ERROR2:
+            return xlog::Severity::FATAL;
+        case xlog::Severity::FATAL:
+            return xlog::Severity::INTERNAL;
+        case xlog::Severity::INTERNAL:
+            return xlog::Severity::INFO;
     }
 
-    return XLog::Severity::INFO;
+    return xlog::Severity::INFO;
 }
 
 int main(int argc, char** argv)
 {
-    XLog::LogSettings settings
+    xlog::LogSettings settings
     {
-        .s_default_level = XLog::Severity::INFO,
+        .s_default_level = xlog::Severity::INFO,
 #ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
         .s_external_control =
         {
@@ -68,14 +68,14 @@ int main(int argc, char** argv)
 #endif // XLOG_USE_SIGCPP
     };
 
-    XLog::InitializeLogging(settings);
+    xlog::InitializeLogging(settings);
 
     XLOG_INFO << "Hello World!";
 
     XLOG_FATAL_F("Goodbye {0}", "World!");
 
     // Loop over each level every second
-    auto current_sev = XLog::Severity::INFO;
+    auto current_sev = xlog::Severity::INFO;
     while(true)
     {
         LOG_AT(current_sev);

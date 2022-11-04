@@ -14,32 +14,32 @@ extern const char* __progname;
 
 static auto SOCKET_REGEX = std::regex(R"(^([0-9]+)-(.+)\.socket$)");
 
-xlogProto::SeverityMessage make_severity_message(XLog::Severity severity)
+xlogProto::SeverityMessage make_severity_message(xlog::Severity severity)
 {
     xlogProto::SeverityMessage msg;
     msg.set_use_source_location(false);
 
     switch(severity)
     {
-        case XLog::Severity::INFO:
+        case xlog::Severity::INFO:
             msg.set_value(xlogProto::Severity::SEV_INFO);
             break;
-        case XLog::Severity::FATAL:
+        case xlog::Severity::FATAL:
             msg.set_value(xlogProto::Severity::SEV_FATAL);
             break;
-        case XLog::Severity::DEBUG:
+        case xlog::Severity::DEBUG:
             msg.set_use_source_location(true);
-        case XLog::Severity::DEBUG2:
+        case xlog::Severity::DEBUG2:
             msg.set_value(xlogProto::Severity::SEV_DEBUG);
             break;
-        case XLog::Severity::WARNING:
+        case xlog::Severity::WARNING:
             msg.set_use_source_location(true);
-        case XLog::Severity::WARNING2:
+        case xlog::Severity::WARNING2:
             msg.set_value(xlogProto::Severity::SEV_WARNING);
             break;
-        case XLog::Severity::ERROR:
+        case xlog::Severity::ERROR:
             msg.set_use_source_location(true);
-        case XLog::Severity::ERROR2:
+        case xlog::Severity::ERROR2:
             msg.set_value(xlogProto::Severity::SEV_ERROR);
             break;
     }
@@ -47,15 +47,15 @@ xlogProto::SeverityMessage make_severity_message(XLog::Severity severity)
     return msg;
 }
 
-XLog::Severity severity_from_message(const xlogProto::SeverityMessage& msg)
+xlog::Severity severity_from_message(const xlogProto::SeverityMessage& msg)
 {
     if(msg.value() == xlogProto::Severity::SEV_INFO)
     {
-        return XLog::Severity::INFO;
+        return xlog::Severity::INFO;
     }
     else if(msg.value() == xlogProto::Severity::SEV_FATAL)
     {
-        return XLog::Severity::FATAL;
+        return xlog::Severity::FATAL;
     }
 
     if(msg.use_source_location())
@@ -63,11 +63,11 @@ XLog::Severity severity_from_message(const xlogProto::SeverityMessage& msg)
         switch(msg.value())
         {
             case xlogProto::Severity::SEV_DEBUG:
-                return XLog::Severity::DEBUG;
+                return xlog::Severity::DEBUG;
             case xlogProto::Severity::SEV_WARNING:
-                return XLog::Severity::WARNING;
+                return xlog::Severity::WARNING;
             case xlogProto::Severity::SEV_ERROR:
-                return XLog::Severity::ERROR;
+                return xlog::Severity::ERROR;
         }
     }
     else
@@ -75,15 +75,15 @@ XLog::Severity severity_from_message(const xlogProto::SeverityMessage& msg)
         switch(msg.value())
         {
             case xlogProto::Severity::SEV_DEBUG:
-                return XLog::Severity::DEBUG2;
+                return xlog::Severity::DEBUG2;
             case xlogProto::Severity::SEV_WARNING:
-                return XLog::Severity::WARNING2;
+                return xlog::Severity::WARNING2;
             case xlogProto::Severity::SEV_ERROR:
-                return XLog::Severity::ERROR2;
+                return xlog::Severity::ERROR2;
         }
     }
 
-    return XLog::Severity::INFO;
+    return xlog::Severity::INFO;
 }
 
 std::string GET_THIS_PROGRAM_LOG_SOCKET_LOCATION()

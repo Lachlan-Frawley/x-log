@@ -36,7 +36,7 @@
 
 #ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
 
-namespace XLog
+namespace xlog
 {
     struct ExternalLogControlSettings
     {
@@ -57,7 +57,7 @@ namespace XLog
 
 #include <boost/log/sinks/syslog_constants.hpp>
 
-namespace XLog
+namespace xlog
 {
     struct SyslogSettings
     {
@@ -73,7 +73,7 @@ namespace XLog
 
 #ifdef XLOG_USE_JOURNAL_LOG
 
-namespace XLog
+namespace xlog
 {
     struct JournalSettings
     {
@@ -86,7 +86,7 @@ namespace XLog
 
 #ifdef XLOG_USE_SIGCPP
 
-namespace XLog
+namespace xlog
 {
     struct SignalSettings
     {
@@ -99,7 +99,7 @@ namespace XLog
 
 #endif // XLOG_USE_SIGCPP
 
-namespace XLog
+namespace xlog
 {
     /*
      * Why are there DEBUGS, WARNS, and ERRORS where we don't care about source location?
@@ -192,7 +192,7 @@ ValueType set_get_attrib(const char* name, ValueType value) {
 
 #define XLOG_PRINT_ENUM(var) static_cast<std::underlying_type_t<decltype(var)>>(var)
 
-#define XLOG_GET_LOGGER(name) static XLog::LoggerType& __logger = XLog::GetNamedLogger(name);
+#define XLOG_GET_LOGGER(name) static xlog::LoggerType& __logger = xlog::GetNamedLogger(name);
 
 #define XLOG_ERRC_VALUE(errc) errc.message()
 
@@ -212,24 +212,24 @@ inline std::string xlog_get_errno_string()
 
 // Normal Stream Macros
 
-#define XLOG_INFO CUSTOM_LOG_SEV(__logger, XLog::Severity::INFO)
-#define XLOG_DEBUG CUSTOM_LOG_SEV(__logger, XLog::Severity::DEBUG)
-#define XLOG_DEBUG2 CUSTOM_LOG_SEV(__logger, XLog::Severity::DEBUG2)
-#define XLOG_WARN CUSTOM_LOG_SEV(__logger, XLog::Severity::WARNING)
-#define XLOG_WARN2 CUSTOM_LOG_SEV(__logger, XLog::Severity::WARNING2)
-#define XLOG_ERROR CUSTOM_LOG_SEV(__logger, XLog::Severity::ERROR)
-#define XLOG_ERROR2 CUSTOM_LOG_SEV(__logger, XLog::Severity::ERROR2)
+#define XLOG_INFO CUSTOM_LOG_SEV(__logger, xlog::Severity::INFO)
+#define XLOG_DEBUG CUSTOM_LOG_SEV(__logger, xlog::Severity::DEBUG)
+#define XLOG_DEBUG2 CUSTOM_LOG_SEV(__logger, xlog::Severity::DEBUG2)
+#define XLOG_WARN CUSTOM_LOG_SEV(__logger, xlog::Severity::WARNING)
+#define XLOG_WARN2 CUSTOM_LOG_SEV(__logger, xlog::Severity::WARNING2)
+#define XLOG_ERROR CUSTOM_LOG_SEV(__logger, xlog::Severity::ERROR)
+#define XLOG_ERROR2 CUSTOM_LOG_SEV(__logger, xlog::Severity::ERROR2)
 
 
 // Inplace Stream Macros
 
-#define XLOG_INFO_I(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::INFO)
-#define XLOG_DEBUG_I(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::DEBUG)
-#define XLOG_DEBUG2_I(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::DEBUG2)
-#define XLOG_WARN_I(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::WARNING)
-#define XLOG_WARN2_I(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::WARNING2)
-#define XLOG_ERROR_I(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::ERROR)
-#define XLOG_ERROR2_I(name) CUSTOM_LOG_SEV(XLog::GetNamedLogger(name), XLog::Severity::ERROR2)
+#define XLOG_INFO_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::INFO)
+#define XLOG_DEBUG_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::DEBUG)
+#define XLOG_DEBUG2_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::DEBUG2)
+#define XLOG_WARN_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::WARNING)
+#define XLOG_WARN2_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::WARNING2)
+#define XLOG_ERROR_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::ERROR)
+#define XLOG_ERROR2_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::ERROR2)
 
 
 // Normal Format Macros
@@ -341,24 +341,24 @@ inline std::string xlog_get_errno_string()
 #define XLOG_ERROR_IFE(name, fmat, ...) XLOG_ERROR_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
 #define XLOG_ERROR2_IFE(name, fmat, ...) XLOG_ERROR2_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
 
-namespace XLog
+namespace xlog
 {
     class fatal_exception : public std::runtime_error
     {
     public:
     #ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-        explicit fatal_exception(XLog::LoggerType& logger, const std::string& what_arg, std::source_location sloc = std::source_location::current());
-        explicit fatal_exception(XLog::LoggerType& logger, const char* what_arg, std::source_location sloc = std::source_location::current());
+        explicit fatal_exception(xlog::LoggerType& logger, const std::string& what_arg, std::source_location sloc = std::source_location::current());
+        explicit fatal_exception(xlog::LoggerType& logger, const char* what_arg, std::source_location sloc = std::source_location::current());
     #else
-        explicit fatal_exception(XLog::LoggerType& logger, const std::string& what_arg);
-        explicit fatal_exception(XLog::LoggerType& logger, const char* what_arg);
+        explicit fatal_exception(xlog::LoggerType& logger, const std::string& what_arg);
+        explicit fatal_exception(xlog::LoggerType& logger, const char* what_arg);
     #endif
 
     private:
     #ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
-        void print_fatal(XLog::LoggerType& logger, std::source_location sloc) const;
+        void print_fatal(xlog::LoggerType& logger, std::source_location sloc) const;
     #else
-        void print_fatal(XLog::LoggerType& logger) const;
+        void print_fatal(xlog::LoggerType& logger) const;
     #endif
     };
 }
@@ -368,41 +368,41 @@ namespace XLog
 
 // Fatal exceptions
 
-#define XLOG_FATAL(msg) throw XLog::fatal_exception(__logger, msg);
-#define XLOG_FATAL_G(msg) throw XLog::fatal_exception(XLog::GetNamedLogger("Global"), msg)
+#define XLOG_FATAL(msg) throw xlog::fatal_exception(__logger, msg);
+#define XLOG_FATAL_G(msg) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), msg)
 
-#define XLOG_FATAL_F(fmat, ...) throw XLog::fatal_exception(__logger, XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__))
-#define XLOG_FATAL_FG(fmat, ...) throw XLog::fatal_exception(__logger, XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__))
+#define XLOG_FATAL_F(fmat, ...) throw xlog::fatal_exception(__logger, XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__))
+#define XLOG_FATAL_FG(fmat, ...) throw xlog::fatal_exception(__logger, XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__))
 
 /*
  * This should work with std::error_code & boost::system::error_code
  */
 #define XLOG_FATAL_C(errc) XLOG_FATAL(XLOG_FATAL_ERRC_VALUE(errc))
-#define XLOG_FATAL_FC(errc, fmat, ...) throw XLog::fatal_exception(__logger, XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
-#define XLOG_FATAL_FGC(errc, fmat, ...) throw XLog::fatal_exception(XLog::GetNamedLogger("Global"), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
+#define XLOG_FATAL_FC(errc, fmat, ...) throw xlog::fatal_exception(__logger, XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
+#define XLOG_FATAL_FGC(errc, fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
 
 /*
  * Fatal ERRNO messages
  */
 #define XLOG_FATAL_E() XLOG_FATAL(XLOG_FATAL_ERRNO_VALUE)
-#define XLOG_FATAL_FE(fmat, ...) throw XLog::fatal_exception(__logger, XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
-#define XLOG_FATAL_FGE(fmat, ...) throw XLog::fatal_exception(XLog::GetNamedLogger("Global"), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
+#define XLOG_FATAL_FE(fmat, ...) throw xlog::fatal_exception(__logger, XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
+#define XLOG_FATAL_FGE(fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
 
 // Named Fatal Exceptions
 
-#define XLOG_FATAL_I(name, msg) throw XLog::fatal_exception(__logger, msg);
-#define XLOG_FATAL_IF(name, fmat, ...) throw XLog::fatal_exception(XLog::GetNamedLogger(name), XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__))
+#define XLOG_FATAL_I(name, msg) throw xlog::fatal_exception(__logger, msg);
+#define XLOG_FATAL_IF(name, fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger(name), XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__))
 
 #define XLOG_FATAL_IC(name, errc) XLOG_FATAL_I(XLOG_FATAL_ERRC_VALUE(errc))
-#define XLOG_FATAL_IFC(name, errc, fmat, ...) throw XLog::fatal_exception(XLog::GetNamedLogger(name), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
+#define XLOG_FATAL_IFC(name, errc, fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger(name), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
 
 #define XLOG_FATAL_IE(namme) XLOG_FATAL_I(XLOG_FATAL_ERRNO_VALUE)
-#define XLOG_FATAL_IFE(name, fmat, ...) throw XLog::fatal_exception(XLog::GetNamedLogger(name), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
+#define XLOG_FATAL_IFE(name, fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger(name), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
 
 /*
  * Default log formatter
  */
-namespace XLogFormatters
+namespace xlogFormatters
 {
     void default_formatter(const boost::log::record_view& rec, boost::log::formatting_ostream& stream);
 }
@@ -411,7 +411,7 @@ namespace XLogFormatters
  * String hashes to allow different "strings" to 
  * be used as keys for the logger map (see source file)
  */
-namespace XLog
+namespace xlog
 {
     struct StringHash
     {
