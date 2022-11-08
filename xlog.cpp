@@ -154,7 +154,24 @@ void xlog::InitializeLogging(LogSettings settings)
             DefaultSeverity.store(LOGGER_SETTINGS.s_default_level);
         }
 
-        boost::log::add_console_log(std::clog, boost::log::keywords::format = &xlogFormatters::default_formatter);
+        if(LOGGER_SETTINGS.s_consoleStream != xlog::ConsoleLogLocation::NONE)
+        {
+            std::ostream* selected_stream = nullptr;
+            switch(LOGGER_SETTINGS.s_consoleStream)
+            {
+                case xlog::ConsoleLogLocation::CLOG:
+                    selected_stream = &std::clog;
+                    break;
+                case xlog::ConsoleLogLocation::CERR:
+                    selected_stream = &std::cerr;
+                    break;
+                case xlog::ConsoleLogLocation::COUT:
+                    selected_stream = &std::cout;
+                    break;
+            }
+
+            boost::log::add_console_log(*selected_stream, boost::log::keywords::format = &xlog::formatters::default_formatter);
+        }
 
 #ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
         boost::log::core::get()->add_global_attribute("SourceLocation", boost::log::attributes::mutable_constant<std::source_location>(std::source_location::current()));
@@ -195,7 +212,7 @@ void xlog::InitializeLogging(LogSettings settings)
 
             SYSLOG_BACKEND_PTR = boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>>(new boost::log::sinks::synchronous_sink<boost::log::sinks::syslog_backend>(_XLOG_SET_IMPL, boost::log::keywords::facility = LOGGER_SETTINGS.s_syslog.facility));
             SYSLOG_BACKEND_PTR->locked_backend()->set_severity_mapper(SYSLOG_SEV_MAPPER);
-            SYSLOG_BACKEND_PTR->set_formatter(&xlogFormatters::default_formatter);
+            SYSLOG_BACKEND_PTR->set_formatter(&xlog::formatters::default_formatter);
 
             boost::log::core::get()->add_sink(SYSLOG_BACKEND_PTR);
             XLOG_INTERNAL << "Added syslog backed";
@@ -409,7 +426,7 @@ static std::string get_file_name(const std::string_view path)
     return std::filesystem::path(path).filename();
 }
 
-void xlogFormatters::default_formatter(const boost::log::record_view& rec, boost::log::formatting_ostream& stream)
+void xlog::formatters::default_formatter(const boost::log::record_view& rec, boost::log::formatting_ostream& stream)
 {
     auto timestamp = boost::log::extract<boost::posix_time::ptime>("TimeStamp", rec);
     auto sev = boost::log::extract<xlog::Severity>("Severity", rec);

@@ -4,7 +4,7 @@ XLOG_GET_LOGGER("Test Program")
 #include <thread>
 
 // Custom log macro to make life a little easier
-#define LOG_AT(sev) CUSTOM_LOG_SEV(__logger, sev) << "Logging @ " << xlog::GetSeverityString(sev)
+#define LOG_AT(sev) CUSTOM_LOG_SEV(XLOG_LOGGER_VAR_NAME, sev) << "Logging @ " << xlog::GetSeverityString(sev)
 
 // Semi 'state machine' to traverse log levels
 xlog::Severity get_next(xlog::Severity given)
@@ -39,6 +39,7 @@ int main(int argc, char** argv)
     xlog::LogSettings settings
     {
         .s_default_level = xlog::Severity::INFO,
+        .s_consoleStream = xlog::ConsoleLogLocation::CLOG,
 #ifdef XLOG_ENABLE_EXTERNAL_LOG_CONTROL
         .s_external_control =
         {
@@ -69,10 +70,6 @@ int main(int argc, char** argv)
     };
 
     xlog::InitializeLogging(settings);
-
-    XLOG_INFO << "Hello World!";
-
-    XLOG_FATAL_F("Goodbye {0}", "World!");
 
     // Loop over each level every second
     auto current_sev = xlog::Severity::INFO;

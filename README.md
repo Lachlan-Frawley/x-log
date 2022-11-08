@@ -1,20 +1,55 @@
-# XLog
+# XLOG
 I wrote xlog as a simple and extendable logging mechanism for a long forgotten project, but since then I have been copying the source files to other projects, making small and incremental improvements, tweaks, and so on. Eventually I decided it'd be easier to do a big cleanup and move it into a nice git repository so I can easily use it anywhere!
 
 # Requirements
+All versions listed below are the minimum versions I've tested with; it is entirely possible that earlier versions will work.
 - C++ 17 at minimum
-- C++ 20 enables using ```std::string```, ```std::string_view```, and ```char*``` as keys to query the logger map
-- Source location is enabled if present and enabled (C++ >=20)
-- Boost Log v2 (not sure how early a version you can get away with, minimum I've tried is 1.72)
-- libfmt
-- Protobuf & gRPC (if external log control is enabled)
-- sigcpp (if enabled)
+  - C++ 20 enables using ```std::string```, ```std::string_view```, and ```char*``` as keys to query the logger map
+  - Source location is enabled if present and enabled (C++ >=20)
+- Boost (>= 1.7.2)
+  - Log v2
+  - Preprocessor
+- libfmt (>= 9.1.0)
+  - https://github.com/fmtlib/fmt
+
+# Conditional Requirements
+## External Log Control
+- Protobuf (>= 3.19.4)
+  - https://github.com/protocolbuffers/protobuf
+- gRPC (>= 1.45.2)
+  - https://github.com/grpc/grpc
+- CLI11 (Command line parser) (>= 2.3.0)
+  - https://github.com/CLIUtils/CLI11
+- cli (Interactive command line interface) (>= 2.0.2)
+  - https://github.com/daniele77/cli
+## Journal Logging
+- libsystemd-dev
+  - ```apt install libsystemd-dev```
+## Sigcpp Signal Handling
+- sigcpp (>= 0.1.0)
+  - https://github.com/Lachlan-Frawley/sig-cpp
+
+# Features
+- Optionally log to console via one of: std::clog (default), std::cerr, or std::cout
+- Log to syslog, can be disabled at compile time via a CMake option, or disabled at runtime via a setting on initialization
+- Log to journal, can be disabled at compile time via a CMake option, or disabled at runtime via a setting on initialization
+- Control of global and per-channel log levels via an external tool over a gRPC interface exposed on a Unix Socket
+  - Can be disabled at compile time via CMake, or disabled at runtime
+- Source location logging if C++20 is available, and the relevant compile time setting is set via CMake
+- Custom exception type that also writes to the log
+- Can be used in a multi-threaded environment
 
 # Notes
-- Logs to std::clog, syslog, or journal
-- Can be used in a multi-threaded environment
-- Has its own exception that writes to the log (and includes source location)
+- Version 0.4.0 introduces several BREAKING CHANGES by renaming macros and the main namespace
 - Not tested in an exception-less environment
+
+# Features I want to add
+- Log to files
+- Add instance loggers (i.e. named instances)
+- Allow adding and removing log sinks via external management (or at least disabling/enabling?)
+- Add checks for exceptions and handle exception macros differently if they are disabled
+- Test in more environments
+- Automated testing & building
 
 # CMake Default Options
 - ```-DENABLE_EXTERNAL_LOG_CONTROL=OFF```, when set to ```ON```, enables external log management (requires gRPC, Protobuf)
@@ -22,14 +57,6 @@ I wrote xlog as a simple and extendable logging mechanism for a long forgotten p
 - ```-DUSE_SYSLOG_LOG=OFF```, Enable logging to syslog
 - ```-DUSE_JOURNAL_LOG=OFF```, Enable logging to journald
 - ```-DUSE_SIGCPP=OFF```, Use Sigcpp (another of my projects) for signal management to allow automatic closure of the external control socket
-
-# Features I want to add
-- Log to files
-- Add instance loggers (i.e. named instances)
-- Allow adding and removing log sinks via external management
-- Add checks for exceptions and handle FATAL() macros differently if they are disabled
-- Test in more environments
-- Automated testing
 
 ## Syslog & Journal Logging
 Both disabled by default, enable via:
