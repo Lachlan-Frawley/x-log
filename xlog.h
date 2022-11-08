@@ -21,9 +21,17 @@
 
 // Select correct macro format definition so that we can use variadic macros for xlog format logging
 #define XLOG_FORMATTER_NOARG(fmat) fmt::format(fmat)
+#if BOOST_PP_VARIADIC_HAS_OPT()
 #define XLOG_FORMATTER_DEFAULT(fmat, ...) fmt::format(fmat, __VA_ARGS__)
 #define XLOG_FORMATTER_SELECT(fmat, ...) BOOST_PP_VA_OPT((XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__)),(XLOG_FORMATTER_NOARG(fmat)),__VA_ARGS__)
 #define XLOG_FORMATTER_SELECT1(fmat, arg1, ...) BOOST_PP_VA_OPT((XLOG_FORMATTER_DEFAULT(fmat, arg1, __VA_ARGS__)),(XLOG_FORMATTER_DEFAULT(fmat, arg1)),__VA_ARGS__)
+#else
+#define XLOG_FORMATTER_DEFAULT(fmat, ...) fmt::format(fmat , #__VA_ARGS__)
+#define XLOG_FORMATTER_SELECT(fmat, ...) fmt::format(fmat , #__VA_ARGS__)
+#define XLOG_FORMATTER_SELECT1(fmat, arg1, ...) fmt::format(fmat, arg1 , #__VA_ARGS__)
+#endif
+
+
 
 #ifdef XLOG_USE_SOURCE_LOCATION_IF_AVAILABLE
 #ifdef __cpp_lib_source_location

@@ -8,6 +8,7 @@ option(USE_JOURNAL_LOG "Enable logging using journald" OFF)
 option(USE_SIGCPP "Enable sig-cpp support" OFF)
 
 option(BUILD_TEST_PROGRAM "Build testing program" ON)
+option(FORCE_CXX_17 "Force the use of C++ 17" OFF)
 
 set(SET_OPTS)
 
@@ -48,8 +49,13 @@ endif(USE_SIGCPP)
 
 set(CMAKE_CXX_STANDARD 17)
 if("cxx_std_20" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-	message("C++ 20 support detected")
-	set(CMAKE_CXX_STANDARD 20)
+	if(FORCE_CXX_17)
+		message("Forcing C++17 support! (Even though C++20 is supported)")
+		set(CMAKE_CXX_STANDARD_REQUIRED ON)
+	else()
+		message("C++ 20 support detected")
+		set(CMAKE_CXX_STANDARD 20)
+	endif()
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

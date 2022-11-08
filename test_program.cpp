@@ -71,6 +71,9 @@ int main(int argc, char** argv)
 
     xlog::InitializeLogging(settings);
 
+    XLOG_INFO_F("Hello {0}!", "World");
+    XLOG_INFO_F("I am testing formatted logging!");
+
     // Loop over each level every second
     auto current_sev = xlog::Severity::INFO;
     while(true)
@@ -79,6 +82,8 @@ int main(int argc, char** argv)
         current_sev = get_next(current_sev);
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
+
+    XLOG_FATAL_F("Message: {0}", "Goodbye world");
 
     return 0;
 }

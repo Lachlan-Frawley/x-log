@@ -57,6 +57,8 @@ All versions listed below are the minimum versions I've tested with; it is entir
 - ```-DUSE_SYSLOG_LOG=OFF```, Enable logging to syslog
 - ```-DUSE_JOURNAL_LOG=OFF```, Enable logging to journald
 - ```-DUSE_SIGCPP=OFF```, Use Sigcpp (another of my projects) for signal management to allow automatic closure of the external control socket
+- ```-DBUILD_TEST_PROGRAM=ON```, Build a simple test program to verify some functionality of xlog
+- ```-DFORCE_CXX_17=OFF```, Force xlog to be compiled under C++17, even if C++20 is available
 
 ## Syslog & Journal Logging
 Both disabled by default, enable via:
