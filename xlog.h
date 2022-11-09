@@ -17,21 +17,20 @@
 
 #include <fmt/core.h>
 
+#if __cplusplus >= 202003L
 #include <boost/preprocessor/facilities/va_opt.hpp>
-
-// Select correct macro format definition so that we can use variadic macros for xlog format logging
-#define XLOG_FORMATTER_NOARG(fmat) fmt::format(fmat)
 #if BOOST_PP_VARIADIC_HAS_OPT()
-#define XLOG_FORMATTER_DEFAULT(fmat, ...) fmt::format(fmat, __VA_ARGS__)
-#define XLOG_FORMATTER_SELECT(fmat, ...) BOOST_PP_VA_OPT((XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__)),(XLOG_FORMATTER_NOARG(fmat)),__VA_ARGS__)
-#define XLOG_FORMATTER_SELECT1(fmat, arg1, ...) BOOST_PP_VA_OPT((XLOG_FORMATTER_DEFAULT(fmat, arg1, __VA_ARGS__)),(XLOG_FORMATTER_DEFAULT(fmat, arg1)),__VA_ARGS__)
-#else
-#define XLOG_FORMATTER_DEFAULT(fmat, ...) fmt::format(fmat , #__VA_ARGS__)
-#define XLOG_FORMATTER_SELECT(fmat, ...) fmt::format(fmat , #__VA_ARGS__)
-#define XLOG_FORMATTER_SELECT1(fmat, arg1, ...) fmt::format(fmat, arg1 , #__VA_ARGS__)
+#define XLOG_USE_BOOST_PP_VARIADIC
+#endif
 #endif
 
-
+#define XLOG_FORMATTER_NOARG(fmat) fmat
+#define XLOG_FORMATTER_DEFAULT(fmat, ...) fmt::format(fmat, __VA_ARGS__)
+#ifdef XLOG_USE_BOOST_PP_VARIADIC
+// Select correct macro format definition so that we can use variadic macros for xlog format logging
+#define XLOG_FORMATTER_SELECT(fmat, ...) BOOST_PP_VA_OPT((XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__)),(XLOG_FORMATTER_NOARG(fmat)),__VA_ARGS__)
+#define XLOG_FORMATTER_SELECT1(fmat, arg1, ...) BOOST_PP_VA_OPT((XLOG_FORMATTER_DEFAULT(fmat, arg1, __VA_ARGS__)),(XLOG_FORMATTER_DEFAULT(fmat, arg1)),__VA_ARGS__)
+#endif // XLOG_USE_BOOST_PP_VARIADIC
 
 #ifdef XLOG_USE_SOURCE_LOCATION_IF_AVAILABLE
 #ifdef __cpp_lib_source_location
@@ -240,7 +239,7 @@ inline std::string xlog_get_errno_string()
 
 
 // Inplace Stream Macros
-
+/*
 #define XLOG_INFO_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::INFO)
 #define XLOG_DEBUG_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::DEBUG)
 #define XLOG_DEBUG2_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::DEBUG2)
@@ -248,10 +247,11 @@ inline std::string xlog_get_errno_string()
 #define XLOG_WARN2_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::WARNING2)
 #define XLOG_ERROR_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::ERROR)
 #define XLOG_ERROR2_I(name) CUSTOM_LOG_SEV(xlog::GetNamedLogger(name), xlog::Severity::ERROR2)
-
+*/
 
 // Normal Format Macros
 
+#ifdef XLOG_USE_BOOST_PP_VARIADIC
 #define XLOG_INFO_F(fmat, ...) XLOG_INFO << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
 #define XLOG_DEBUG_F(fmat, ...) XLOG_DEBUG << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
 #define XLOG_DEBUG2_F(fmat, ...) XLOG_DEBUG2 << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
@@ -260,9 +260,33 @@ inline std::string xlog_get_errno_string()
 #define XLOG_ERROR_F(fmat, ...) XLOG_ERROR << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
 #define XLOG_ERROR2_F(fmat, ...) XLOG_ERROR2 << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
 
+#define XLOG_INFO_M(fmat, ...) XLOG_INFO << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
+#define XLOG_DEBUG_M(fmat, ...) XLOG_DEBUG << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
+#define XLOG_DEBUG2_M(fmat, ...) XLOG_DEBUG2 << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
+#define XLOG_WARN_M(fmat, ...) XLOG_WARN << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
+#define XLOG_WARN2_M(fmat, ...) XLOG_WARN2 << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
+#define XLOG_ERROR_M(fmat, ...) XLOG_ERROR << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
+#define XLOG_ERROR2_M(fmat, ...) XLOG_ERROR2 << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
+#else
+#define XLOG_INFO_F(fmat, ...) XLOG_INFO << XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__)
+#define XLOG_DEBUG_F(fmat, ...) XLOG_DEBUG << XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__)
+#define XLOG_DEBUG2_F(fmat, ...) XLOG_DEBUG2 << XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__)
+#define XLOG_WARN_F(fmat, ...) XLOG_WARN << XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__)
+#define XLOG_WARN2_F(fmat, ...) XLOG_WARN2 << XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__)
+#define XLOG_ERROR_F(fmat, ...) XLOG_ERROR << XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__)
+#define XLOG_ERROR2_F(fmat, ...) XLOG_ERROR2 << XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__)
+
+#define XLOG_INFO_M(msg) XLOG_INFO << XLOG_FORMATTER_NOARG(msg)
+#define XLOG_DEBUG_M(msg) XLOG_DEBUG << XLOG_FORMATTER_NOARG(msg)
+#define XLOG_DEBUG2_M(msg) XLOG_DEBUG2 << XLOG_FORMATTER_NOARG(msg)
+#define XLOG_WARN_M(msg) XLOG_WARN << XLOG_FORMATTER_NOARG(msg)
+#define XLOG_WARN2_M(msg) XLOG_WARN2 << XLOG_FORMATTER_NOARG(msg)
+#define XLOG_ERROR_M(msg) XLOG_ERROR << XLOG_FORMATTER_NOARG(msg)
+#define XLOG_ERROR2_M(msg) XLOG_ERROR2 << XLOG_FORMATTER_NOARG(msg)
+#endif
 
 // Inplace Format Macros
-
+/*
 #define XLOG_INFO_IF(name, fmat, ...) XLOG_INFO_I(name) << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
 #define XLOG_DEBUG_IF(name, fmat, ...) XLOG_DEBUG_I(name) << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
 #define XLOG_DEBUG2_IF(name, fmat, ...) XLOG_DEBUG2_I(name) << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
@@ -270,7 +294,7 @@ inline std::string xlog_get_errno_string()
 #define XLOG_WARN2_IF(name, fmat, ...) XLOG_WARN2_I(name) << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
 #define XLOG_ERROR_IF(name, fmat, ...) XLOG_ERROR_I(name) << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
 #define XLOG_ERROR2_IF(name, fmat, ...) XLOG_ERROR2_I(name) << XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__)
-
+*/
 
 // Error Code Stream Macros
 
@@ -284,7 +308,7 @@ inline std::string xlog_get_errno_string()
 
 
 // Inplace Error Code Stream Macros
-
+/*
 #define XLOG_INFO_IC(name, errc) XLOG_INFO_I(name) << XLOG_ERRC_VALUE(errc)
 #define XLOG_DEBUG_IC(name, errc) XLOG_DEBUG_I(name) << XLOG_ERRC_VALUE(errc)
 #define XLOG_DEBUG2_IC(name, errc) XLOG_DEBUG2_I(name) << XLOG_ERRC_VALUE(errc)
@@ -292,10 +316,11 @@ inline std::string xlog_get_errno_string()
 #define XLOG_WARN2_IC(name, errc) XLOG_WARN2_I(name) << XLOG_ERRC_VALUE(errc)
 #define XLOG_ERROR_IC(name, errc) XLOG_ERROR_I(name) << XLOG_ERRC_VALUE(errc)
 #define XLOG_ERROR2_IC(name, errc) XLOG_ERROR2_I(name) << XLOG_ERRC_VALUE(errc)
-
+*/
 
 // Error Code Format Macros
 
+#ifdef XLOG_USE_BOOST_PP_VARIADIC
 #define XLOG_INFO_FC(errc, fmat, ...) XLOG_INFO << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
 #define XLOG_DEBUG_FC(errc, fmat, ...) XLOG_DEBUG << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
 #define XLOG_DEBUG2_FC(errc, fmat, ...) XLOG_DEBUG2 << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
@@ -304,9 +329,34 @@ inline std::string xlog_get_errno_string()
 #define XLOG_ERROR_FC(errc, fmat, ...) XLOG_ERROR << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
 #define XLOG_ERROR2_FC(errc, fmat, ...) XLOG_ERROR2 << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
 
+#define XLOG_INFO_MC(errc, fmat, ...) XLOG_INFO << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#define XLOG_DEBUG_MC(errc, fmat, ...) XLOG_DEBUG << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#define XLOG_DEBUG2_MC(errc, fmat, ...) XLOG_DEBUG2 << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#define XLOG_WARN_MC(errc, fmat, ...) XLOG_WARN << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#define XLOG_WARN2_MC(errc, fmat, ...) XLOG_WARN2 << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#define XLOG_ERROR_MC(errc, fmat, ...) XLOG_ERROR << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#define XLOG_ERROR2_MC(errc, fmat, ...) XLOG_ERROR2 << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#else
+#define XLOG_INFO_FC(errc, fmat, ...) XLOG_INFO << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#define XLOG_DEBUG_FC(errc, fmat, ...) XLOG_DEBUG << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#define XLOG_DEBUG2_FC(errc, fmat, ...) XLOG_DEBUG2 << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#define XLOG_WARN_FC(errc, fmat, ...) XLOG_WARN << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#define XLOG_WARN2_FC(errc, fmat, ...) XLOG_WARN2 << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#define XLOG_ERROR_FC(errc, fmat, ...) XLOG_ERROR << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+#define XLOG_ERROR2_FC(errc, fmat, ...) XLOG_ERROR2 << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
+
+#define XLOG_INFO_MC(errc, fmat) XLOG_INFO << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc))
+#define XLOG_DEBUG_MC(errc, fmat) XLOG_DEBUG << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc))
+#define XLOG_DEBUG2_MC(errc, fmat) XLOG_DEBUG2 << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc))
+#define XLOG_WARN_MC(errc, fmat) XLOG_WARN << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc))
+#define XLOG_WARN2_MC(errc, fmat) XLOG_WARN2 << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc))
+#define XLOG_ERROR_MC(errc, fmat) XLOG_ERROR << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc))
+#define XLOG_ERROR2_MC(errc, fmat) XLOG_ERROR2 << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRC_VALUE(errc))
+#endif
+
 
 // Inplace Error Code Format Macros
-
+/*
 #define XLOG_INFO_IFC(name, errc, fmat, ...) XLOG_INFO_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
 #define XLOG_DEBUG_IFC(name, errc, fmat, ...) XLOG_DEBUG_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
 #define XLOG_DEBUG2_IFC(name, errc, fmat, ...) XLOG_DEBUG2_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
@@ -314,7 +364,7 @@ inline std::string xlog_get_errno_string()
 #define XLOG_WARN2_IFC(name, errc, fmat, ...) XLOG_WARN2_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
 #define XLOG_ERROR_IFC(name, errc, fmat, ...) XLOG_ERROR_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
 #define XLOG_ERROR2_IFC(name, errc, fmat, ...) XLOG_ERROR2_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRC_VALUE(errc), __VA_ARGS__)
-
+*/
 
 // Errno Stream Macros
 
@@ -328,7 +378,7 @@ inline std::string xlog_get_errno_string()
 
 
 // Inplace Errno Stream Macros
-
+/*
 #define XLOG_INFO_IE(name) XLOG_INFO_I(name) << XLOG_ERRNO_VALUE
 #define XLOG_DEBUG_IE(name) XLOG_DEBUG_I(name) << XLOG_ERRNO_VALUE
 #define XLOG_DEBUG2_IE(name) XLOG_DEBUG2_I(name) << XLOG_ERRNO_VALUE
@@ -336,10 +386,11 @@ inline std::string xlog_get_errno_string()
 #define XLOG_WARN2_IE(name) XLOG_WARN2_I(name) << XLOG_ERRNO_VALUE
 #define XLOG_ERROR_IE(name) XLOG_ERROR_I(name) << XLOG_ERRNO_VALUE
 #define XLOG_ERROR2_IE(name) XLOG_ERROR2_I(name) << XLOG_ERRNO_VALUE
-
+*/
 
 // Errno Format Macros
 
+#ifdef XLOG_USE_BOOST_PP_VARIADIC
 #define XLOG_INFO_FE(fmat, ...) XLOG_INFO << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
 #define XLOG_DEBUG_FE(fmat, ...) XLOG_DEBUG << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
 #define XLOG_DEBUG2_FE(fmat, ...) XLOG_DEBUG2 << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
@@ -348,9 +399,34 @@ inline std::string xlog_get_errno_string()
 #define XLOG_ERROR_FE(fmat, ...) XLOG_ERROR << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
 #define XLOG_ERROR2_FE(fmat, ...) XLOG_ERROR2 << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
 
+#define XLOG_INFO_ME(fmat, ...) XLOG_INFO << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#define XLOG_DEBUG_ME(fmat, ...) XLOG_DEBUG << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#define XLOG_DEBUG2_ME(fmat, ...) XLOG_DEBUG2 << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#define XLOG_WARN_ME(fmat, ...) XLOG_WARN << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#define XLOG_WARN2_ME(fmat, ...) XLOG_WARN2 << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#define XLOG_ERROR_ME(fmat, ...) XLOG_ERROR << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#define XLOG_ERROR2_ME(fmat, ...) XLOG_ERROR2 << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#else
+#define XLOG_INFO_FE(fmat, ...) XLOG_INFO << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#define XLOG_DEBUG_FE(fmat, ...) XLOG_DEBUG << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#define XLOG_DEBUG2_FE(fmat, ...) XLOG_DEBUG2 << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#define XLOG_WARN_FE(fmat, ...) XLOG_WARN << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#define XLOG_WARN2_FE(fmat, ...) XLOG_WARN2 << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#define XLOG_ERROR_FE(fmat, ...) XLOG_ERROR << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+#define XLOG_ERROR2_FE(fmat, ...) XLOG_ERROR2 << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+
+#define XLOG_INFO_ME(fmat) XLOG_INFO << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE)
+#define XLOG_DEBUG_ME(fmat) XLOG_DEBUG << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE)
+#define XLOG_DEBUG2_ME(fmat) XLOG_DEBUG2 << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE)
+#define XLOG_WARN_ME(fmat) XLOG_WARN << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE)
+#define XLOG_WARN2_ME(fmat) XLOG_WARN2 << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE)
+#define XLOG_ERROR_ME(fmat) XLOG_ERROR << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE)
+#define XLOG_ERROR2_ME(fmat) XLOG_ERROR2 << XLOG_FORMATTER_DEFAULT(fmat, XLOG_ERRNO_VALUE)
+#endif
+
 
 // Inplace Errno Format Macros
-
+/*
 #define XLOG_INFO_IFE(name, fmat, ...) XLOG_INFO_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
 #define XLOG_DEBUG_IFE(name, fmat, ...) XLOG_DEBUG_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
 #define XLOG_DEBUG2_IFE(name, fmat, ...) XLOG_DEBUG2_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
@@ -358,6 +434,7 @@ inline std::string xlog_get_errno_string()
 #define XLOG_WARN2_IFE(name, fmat, ...) XLOG_WARN2_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
 #define XLOG_ERROR_IFE(name, fmat, ...) XLOG_ERROR_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
 #define XLOG_ERROR2_IFE(name, fmat, ...) XLOG_ERROR2_I(name) << XLOG_FORMATTER_SELECT1(fmat, XLOG_ERRNO_VALUE, __VA_ARGS__)
+*/
 
 namespace xlog
 {
@@ -389,25 +466,50 @@ namespace xlog
 #define XLOG_FATAL(msg) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, msg);
 #define XLOG_FATAL_G(msg) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), msg)
 
+#define XLOG_FATAL_C(errc) XLOG_FATAL(XLOG_FATAL_ERRC_VALUE(errc))
+
+#define XLOG_FATAL_E() XLOG_FATAL(XLOG_FATAL_ERRNO_VALUE)
+
+#ifdef XLOG_USE_BOOST_PP_VARIADIC
 #define XLOG_FATAL_F(fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__))
 #define XLOG_FATAL_FG(fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__))
 
-/*
- * This should work with std::error_code & boost::system::error_code
- */
-#define XLOG_FATAL_C(errc) XLOG_FATAL(XLOG_FATAL_ERRC_VALUE(errc))
 #define XLOG_FATAL_FC(errc, fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
 #define XLOG_FATAL_FGC(errc, fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
 
-/*
- * Fatal ERRNO messages
- */
-#define XLOG_FATAL_E() XLOG_FATAL(XLOG_FATAL_ERRNO_VALUE)
 #define XLOG_FATAL_FE(fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
 #define XLOG_FATAL_FGE(fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
 
-// Named Fatal Exceptions
+#define XLOG_FATAL_M(fmat, ...) XLOG_FATAL_F(fmat, __VA_ARGS__)
+#define XLOG_FATAL_MG(fmat, ...) XLOG_FATAL_FG(fmat, __VA_ARGS__)
 
+#define XLOG_FATAL_MC(errc, fmat, ...) XLOG_FATAL_FC(errc, fmat, __VA_ARGS__)
+#define XLOG_FATAL_MGC(errc, fmat, ...) XLOG_FATAL_FGC(errc, fmat, __VA_ARGS__)
+
+#define XLOG_FATAL_ME(fmat, ...) XLOG_FATAL_FE(fmat, __VA_ARGS__)
+#define XLOG_FATAL_MGE(fmat, ...) XLOG_FATAL_FGE(fmat, __VA_ARGS__)
+#else
+#define XLOG_FATAL_F(fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__))
+#define XLOG_FATAL_FG(fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__))
+
+#define XLOG_FATAL_FC(errc, fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_DEFAULT(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
+#define XLOG_FATAL_FGC(errc, fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), XLOG_FORMATTER_DEFAULT(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
+
+#define XLOG_FATAL_FE(fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
+#define XLOG_FATAL_FGE(fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
+
+#define XLOG_FATAL_M(fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_DEFAULT(fmat))
+#define XLOG_FATAL_MG(fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_DEFAULT(fmat))
+
+#define XLOG_FATAL_MC(errc, fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_DEFAULT(fmat, XLOG_FATAL_ERRC_VALUE(errc)))
+#define XLOG_FATAL_MGC(errc, fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), XLOG_FORMATTER_DEFAULT(fmat, XLOG_FATAL_ERRC_VALUE(errc)))
+
+#define XLOG_FATAL_ME(fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_DEFAULT(fmat, XLOG_FATAL_ERRNO_VALUE))
+#define XLOG_FATAL_MGE(fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), XLOG_FORMATTER_DEFAULT(fmat, XLOG_FATAL_ERRNO_VALUE))
+#endif
+
+// Named Fatal Exceptions
+/*
 #define XLOG_FATAL_I(name, msg) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, msg);
 #define XLOG_FATAL_IF(name, fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger(name), XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__))
 
@@ -416,6 +518,7 @@ namespace xlog
 
 #define XLOG_FATAL_IE(namme) XLOG_FATAL_I(XLOG_FATAL_ERRNO_VALUE)
 #define XLOG_FATAL_IFE(name, fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger(name), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
+*/
 
 /*
  * Default log formatter

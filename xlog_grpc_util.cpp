@@ -101,7 +101,7 @@ std::vector<xlog_socket_candidate> TRY_GET_PROGRAM_LOG_SOCKET(const std::string&
     auto itr = std::filesystem::directory_iterator(BASE_SOCKET_PATH, std::filesystem::directory_options::skip_permission_denied, err);
     if(err)
     {
-        XLOG_INTERNAL_FC(err, "{0}; Failed to get directory iterator");
+        XLOG_INTERNAL_MC(err, "{0}; Failed to get directory iterator");
         return candidates;
     }
 
@@ -110,7 +110,7 @@ std::vector<xlog_socket_candidate> TRY_GET_PROGRAM_LOG_SOCKET(const std::string&
         bool is_socket = sockFile.is_socket(err);
         if(err)
         {
-            XLOG_INTERNAL_FC(err, "{0}; Failed to check if file is socket");
+            XLOG_INTERNAL_MC(err, "{0}; Failed to check if file is socket");
         }
 
         if(!is_socket)
@@ -168,7 +168,7 @@ bool TRY_SETUP_THIS_PROGRAM_SOCKET()
         std::filesystem::create_directories(BASE_SOCKET_PATH, err);
         if(err)
         {
-            XLOG_INTERNAL_FC(err, "{0}; Failed to create directory");
+            XLOG_INTERNAL_MC(err, "{0}; Failed to create directory");
             return false;
         }
     }
@@ -176,7 +176,7 @@ bool TRY_SETUP_THIS_PROGRAM_SOCKET()
     {
         if(!std::filesystem::is_directory(BASE_SOCKET_PATH, err))
         {
-            XLOG_INTERNAL_FC(err, "{0}; Base socket path is not a directory");
+            XLOG_INTERNAL_MC(err, "{0}; Base socket path is not a directory");
             return false;
         }
     }
@@ -184,7 +184,7 @@ bool TRY_SETUP_THIS_PROGRAM_SOCKET()
     auto socket_exists = std::filesystem::exists(LOG_SOCKET, err);
     if(err)
     {
-        XLOG_INTERNAL_FC(err, "{0}; Failed to check if socket exists");
+        XLOG_INTERNAL_MC(err, "{0}; Failed to check if socket exists");
         return false;
     }
 
@@ -192,7 +192,7 @@ bool TRY_SETUP_THIS_PROGRAM_SOCKET()
     {
         if(::unlink(LOG_SOCKET.c_str()) != 0)
         {
-            XLOG_INTERNAL_FE("{0}; Failed to unlink socket");
+            XLOG_INTERNAL_ME("{0}; Failed to unlink socket");
             return false;
         }
     }

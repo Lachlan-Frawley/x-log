@@ -72,7 +72,7 @@ int main(int argc, char** argv)
     xlog::InitializeLogging(settings);
 
     XLOG_INFO_F("Hello {0}!", "World");
-    XLOG_INFO_F("I am testing formatted logging!");
+    XLOG_INFO_M("I am testing formatted logging!");
 
     // Loop over each level every second
     auto current_sev = xlog::Severity::INFO;

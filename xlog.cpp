@@ -2,7 +2,7 @@
 
 static xlog::LogSettings LOGGER_SETTINGS;
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <sys/stat.h>
 
 #include <mutex>
@@ -258,7 +258,7 @@ void xlog::InitializeLogging(LogSettings settings)
                 // Make sure log socket is accessible by anyone
                 if(chmod(GET_THIS_PROGRAM_LOG_SOCKET_LOCATION().c_str(), (S_IRUSR | S_IWUSR) | (S_IRGRP | S_IWGRP) | (S_IROTH | S_IWOTH)) < 0)
                 {
-                    XLOG_INTERNAL_FE("{0}; Failed to modify permissions for xlog socket");
+                    XLOG_INTERNAL_ME("{0}; Failed to modify permissions for xlog socket");
 
                     // Only break if setup failures are fatal, since this is a somewhat recoverable error
                     if(LOGGER_SETTINGS.s_external_control.setup_failure_is_fatal)
