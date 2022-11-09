@@ -56,6 +56,10 @@ WRITE_PATTERN_S2()
 }
 
 # Precedence -> Inplace 'I' > Formatted 'F' > ERRNO 'E' & Error Code 'C'
+# XLOG_FORMATTER_SELECT(fmat, ...)
+# XLOG_FORMATTER_SELECT1(fmat, arg1, ...)
+# XLOG_FORMATTER_NOARG(fmat)
+# XLOG_FORMATTER_DEFAULT(fmat, ...)
 
 GENERATE_QFF()
 {
@@ -147,8 +151,26 @@ SETUP_ARGS()
     echo "${BUILD_STR}"
 }
 
-# XLOG_FORMATTER_SELECT(fmat, ...)
-# XLOG_FORMATTER_SELECT1(fmat, arg1, ...)
+SETUP_FMAT_ARGS()
+{
+    local ALL_ARGS="$1"
+
+    # The extra space is deliberate
+    local WORDS=($(echo "$ALL_ARGS " | sed -rn 's/[, ]+/\n/gp'))
+    local BUILD_STR=''
+
+    if printf '%s\0' "${WORDS[@]}" | grep -Fxqz -- 'fmat'; then
+        BUILD_STR="$(SEPERATED_APPEND "${BUILD_STR}" 'fmat')"
+    fi
+
+    for w in "${WORDS[@]}"; do
+        if [ "$w" != 'name' ] && [ "$w" != 'fmat' ]; then
+            BUILD_STR="$(SEPERATED_APPEND "${BUILD_STR}" "$w")"
+        fi
+    done
+
+    echo "${BUILD_STR}"
+}
 
 GENERATE_VARIADIC_FORMATTER()
 {
@@ -191,29 +213,35 @@ WRITE_PATTERN_F()
     local LOGGER_NAME="$2"
     local EXTRA_QF="$3"
 
-    local ORDERED_QFF="$(GENERATE_QFF ${EXTRA_QF})"
-    local ORDERED_QFM="$(GENERATE_QFM ${EXTRA_QF})"
-    local ALL_ARGS="$(SETUP_ARGS ${EXTRA_ARGS})"
+    local ORDERED_QFF="$(GENERATE_QFF "${EXTRA_QF}")"
+    local ORDERED_QFM="$(GENERATE_QFM "${EXTRA_QF}")"
+    local ALL_ARGS="$(SETUP_ARGS "${EXTRA_ARGS}")"
+    local FORMATTER_ARGS="$(SETUP_FMAT_ARGS "${ALL_ARGS}")"
 
     local FORMATTER_VARIADIC="$(GENERATE_VARIADIC_FORMATTER ${EXTRA_ARGS})"
     local FORMATTER_NV_V="$(GENERATE_FORMATTER_NV_V ${EXTRA_ARGS})"
     local FORMATTER_NV_NV="$(GENERATE_FORMATTER_NV_NV ${EXTRA_ARGS})"
 
+    local STREAM_APPEND=''
+    if [[ "$EXTRA_QF" =~ I ]]; then
+        STREAM_APPEND='_I(name)'
+    fi
+
     WRITE_OUT '#ifdef XLOG_USE_BOOST_PP_VARIADIC'
     for i in $(seq 0 ${LLEN}); do
-        WRITE_OUT "#define XLOG_${LEVELS[i]}_${ORDERED_QFF}(${ALL_ARGS}, ...) XLOG_${LEVELS[i]} << ${FORMATTER_VARIADIC}(${ALL_ARGS}, __VA_ARGS__)"
+        WRITE_OUT "#define XLOG_${LEVELS[i]}_${ORDERED_QFF}(${ALL_ARGS}, ...) XLOG_${LEVELS[i]}${STREAM_APPEND} << ${FORMATTER_VARIADIC}(${FORMATTER_ARGS}, __VA_ARGS__)"
     done
     WRITE_OUT
     for i in $(seq 0 ${LLEN}); do
-        WRITE_OUT "#define XLOG_${LEVELS[i]}_${ORDERED_QFM}(${ALL_ARGS}, ...) XLOG_${LEVELS[i]}_${ORDERED_QFF}(${ALL_ARGS}, __VA_ARGS__)"
+        WRITE_OUT "#define XLOG_${LEVELS[i]}_${ORDERED_QFM}(${ALL_ARGS}, ...) XLOG_${LEVELS[i]}_${ORDERED_QFF}(${FORMATTER_ARGS}, __VA_ARGS__)"
     done
     WRITE_OUT '#else'
     for i in $(seq 0 ${LLEN}); do
-        WRITE_OUT "#define XLOG_${LEVELS[i]}_${ORDERED_QFF}(${ALL_ARGS}, ...) XLOG_${LEVELS[i]} << ${FORMATTER_NV_V}(${ALL_ARGS}, __VA_ARGS__)"
+        WRITE_OUT "#define XLOG_${LEVELS[i]}_${ORDERED_QFF}(${ALL_ARGS}, ...) XLOG_${LEVELS[i]}${STREAM_APPEND} << ${FORMATTER_NV_V}(${FORMATTER_ARGS}, __VA_ARGS__)"
     done
     WRITE_OUT
     for i in $(seq 0 ${LLEN}); do
-        WRITE_OUT "#define XLOG_${LEVELS[i]}_${ORDERED_QFM}(${ALL_ARGS}, ...) XLOG_${LEVELS[i]} << ${FORMATTER_NV_NV}(${ALL_ARGS})"
+        WRITE_OUT "#define XLOG_${LEVELS[i]}_${ORDERED_QFM}(${ALL_ARGS}, ...) XLOG_${LEVELS[i]}${STREAM_APPEND} << ${FORMATTER_NV_NV}(${FORMATTER_ARGS})"
     done
     WRITE_OUT '#endif // XLOG_USE_BOOST_PP_VARIADIC'
 }
@@ -243,7 +271,7 @@ WRITE_TODO()
     WRITE_OUT '// TODO'
 }
 
-WRITE_PATTERN_F '' 'XLOG_LOGGER_VAR_NAME' ''
+WRITE_PATTERN_F 'name, errc' 'XLOG_LOGGER_VAR_NAME' 'IC'
 
 exit 0
 
