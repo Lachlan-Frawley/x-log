@@ -6,7 +6,7 @@ All versions listed below are the minimum versions I've tested with; it is entir
 - C++ 17 at minimum
   - C++ 20 enables using ```std::string```, ```std::string_view```, and ```char*``` as keys to query the logger map
   - Source location is enabled if present and enabled (C++ >=20)
-- Boost (>= 1.7.2)
+- Boost (>= 1.72.0)
   - Log v2
   - Preprocessor
 - libfmt (>= 9.1.0)

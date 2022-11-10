@@ -28,11 +28,6 @@ if(XLOG_USE_JOURNAL_LOG)
     add_compile_definitions(XLOG_USE_JOURNAL_LOG)
 endif(XLOG_USE_JOURNAL_LOG)
 
-if(XLOG_USE_SIGCPP)
-    find_dependency(sigcpp REQUIRED)
-    add_compile_definitions(XLOG_USE_SIGCPP)
-endif(XLOG_USE_SIGCPP)
-
 get_filename_component(SELF_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(${SELF_DIR}/xlog.cmake)
 
