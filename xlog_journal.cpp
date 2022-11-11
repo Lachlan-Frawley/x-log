@@ -13,24 +13,24 @@
 
 // Keep up-to-date with SYSLOG_SEV_MAPPER in xlog.cpp
 // TODO - Find a better way of keeping this all in-sync
-int sev2priority(xlog::Severity sev)
+int sev2priority(XLog::Severity sev)
 {
     switch (sev)
     {
-        case xlog::Severity::INFO:
+        case XLog::Severity::INFO:
             return LOG_DEBUG;
-        case xlog::Severity::DEBUG:
-        case xlog::Severity::DEBUG2:
+        case XLog::Severity::DEBUG:
+        case XLog::Severity::DEBUG2:
             return LOG_INFO;
-        case xlog::Severity::WARNING:
-        case xlog::Severity::WARNING2:
+        case XLog::Severity::WARNING:
+        case XLog::Severity::WARNING2:
             return LOG_WARNING;
-        case xlog::Severity::ERROR:
-        case xlog::Severity::ERROR2:
+        case XLog::Severity::ERROR:
+        case XLog::Severity::ERROR2:
             return LOG_ERR;
-        case xlog::Severity::FATAL:
+        case XLog::Severity::FATAL:
             return LOG_CRIT;
-        case xlog::Severity::INTERNAL:
+        case XLog::Severity::INTERNAL:
             return LOG_ALERT;
     }
 
@@ -63,7 +63,7 @@ int sev2priority(xlog::Severity sev)
 
 void xlog_journal_backend::consume(const boost::log::record_view& rec)
 {
-    auto sev = boost::log::extract<xlog::Severity>("Severity", rec);
+    auto sev = boost::log::extract<XLog::Severity>("Severity", rec);
     auto channel = boost::log::extract<std::string>("Channel", rec);
     auto message = boost::log::extract<std::string>("Message", rec);
 

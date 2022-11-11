@@ -14,32 +14,32 @@ extern const char* __progname;
 
 static auto SOCKET_REGEX = std::regex(R"(^([0-9]+)-(.+)\.socket$)");
 
-xlogProto::SeverityMessage make_severity_message(xlog::Severity severity)
+xlogProto::SeverityMessage make_severity_message(XLog::Severity severity)
 {
     xlogProto::SeverityMessage msg;
     msg.set_use_source_location(false);
 
     switch(severity)
     {
-        case xlog::Severity::INFO:
+        case XLog::Severity::INFO:
             msg.set_value(xlogProto::Severity::SEV_INFO);
             break;
-        case xlog::Severity::FATAL:
+        case XLog::Severity::FATAL:
             msg.set_value(xlogProto::Severity::SEV_FATAL);
             break;
-        case xlog::Severity::DEBUG:
+        case XLog::Severity::DEBUG:
             msg.set_use_source_location(true);
-        case xlog::Severity::DEBUG2:
+        case XLog::Severity::DEBUG2:
             msg.set_value(xlogProto::Severity::SEV_DEBUG);
             break;
-        case xlog::Severity::WARNING:
+        case XLog::Severity::WARNING:
             msg.set_use_source_location(true);
-        case xlog::Severity::WARNING2:
+        case XLog::Severity::WARNING2:
             msg.set_value(xlogProto::Severity::SEV_WARNING);
             break;
-        case xlog::Severity::ERROR:
+        case XLog::Severity::ERROR:
             msg.set_use_source_location(true);
-        case xlog::Severity::ERROR2:
+        case XLog::Severity::ERROR2:
             msg.set_value(xlogProto::Severity::SEV_ERROR);
             break;
     }
@@ -47,15 +47,15 @@ xlogProto::SeverityMessage make_severity_message(xlog::Severity severity)
     return msg;
 }
 
-xlog::Severity severity_from_message(const xlogProto::SeverityMessage& msg)
+XLog::Severity severity_from_message(const xlogProto::SeverityMessage& msg)
 {
     if(msg.value() == xlogProto::Severity::SEV_INFO)
     {
-        return xlog::Severity::INFO;
+        return XLog::Severity::INFO;
     }
     else if(msg.value() == xlogProto::Severity::SEV_FATAL)
     {
-        return xlog::Severity::FATAL;
+        return XLog::Severity::FATAL;
     }
 
     if(msg.use_source_location())
@@ -63,11 +63,11 @@ xlog::Severity severity_from_message(const xlogProto::SeverityMessage& msg)
         switch(msg.value())
         {
             case xlogProto::Severity::SEV_DEBUG:
-                return xlog::Severity::DEBUG;
+                return XLog::Severity::DEBUG;
             case xlogProto::Severity::SEV_WARNING:
-                return xlog::Severity::WARNING;
+                return XLog::Severity::WARNING;
             case xlogProto::Severity::SEV_ERROR:
-                return xlog::Severity::ERROR;
+                return XLog::Severity::ERROR;
         }
     }
     else
@@ -75,15 +75,15 @@ xlog::Severity severity_from_message(const xlogProto::SeverityMessage& msg)
         switch(msg.value())
         {
             case xlogProto::Severity::SEV_DEBUG:
-                return xlog::Severity::DEBUG2;
+                return XLog::Severity::DEBUG2;
             case xlogProto::Severity::SEV_WARNING:
-                return xlog::Severity::WARNING2;
+                return XLog::Severity::WARNING2;
             case xlogProto::Severity::SEV_ERROR:
-                return xlog::Severity::ERROR2;
+                return XLog::Severity::ERROR2;
         }
     }
 
-    return xlog::Severity::INFO;
+    return XLog::Severity::INFO;
 }
 
 std::string GET_THIS_PROGRAM_LOG_SOCKET_LOCATION()
@@ -101,7 +101,7 @@ std::vector<xlog_socket_candidate> TRY_GET_PROGRAM_LOG_SOCKET(const std::string&
     auto itr = std::filesystem::directory_iterator(BASE_SOCKET_PATH, std::filesystem::directory_options::skip_permission_denied, err);
     if(err)
     {
-        XLOG_INTERNAL_FC(err, "{0}; Failed to get directory iterator");
+        INTERNAL_CODE(err) << "; Failed to get directory iterator";
         return candidates;
     }
 
@@ -110,7 +110,7 @@ std::vector<xlog_socket_candidate> TRY_GET_PROGRAM_LOG_SOCKET(const std::string&
         bool is_socket = sockFile.is_socket(err);
         if(err)
         {
-            XLOG_INTERNAL_FC(err, "{0}; Failed to check if file is socket");
+            INTERNAL_CODE(err) << "; Failed to check if file is socket";
         }
 
         if(!is_socket)
@@ -126,7 +126,7 @@ std::vector<xlog_socket_candidate> TRY_GET_PROGRAM_LOG_SOCKET(const std::string&
         {
             if(sock_match.size() != 3)
             {
-                XLOG_INTERNAL_FC(err, "{0}; sock_match size != 3 ({1})", sock_match.size());
+                INTERNAL_CODE(err) << "; sock_match size != 3 (" << sock_match.size() << ')';
                 continue;
             }
 
@@ -168,7 +168,7 @@ bool TRY_SETUP_THIS_PROGRAM_SOCKET()
         std::filesystem::create_directories(BASE_SOCKET_PATH, err);
         if(err)
         {
-            XLOG_INTERNAL_FC(err, "{0}; Failed to create directory");
+            INTERNAL_CODE(err) << "; Failed to create directory";
             return false;
         }
     }
@@ -176,7 +176,7 @@ bool TRY_SETUP_THIS_PROGRAM_SOCKET()
     {
         if(!std::filesystem::is_directory(BASE_SOCKET_PATH, err))
         {
-            XLOG_INTERNAL_FC(err, "{0}; Base socket path is not a directory");
+            INTERNAL_CODE(err) << "; Base socket path is not a directory";
             return false;
         }
     }
@@ -184,7 +184,7 @@ bool TRY_SETUP_THIS_PROGRAM_SOCKET()
     auto socket_exists = std::filesystem::exists(LOG_SOCKET, err);
     if(err)
     {
-        XLOG_INTERNAL_FC(err, "{0}; Failed to check if socket exists");
+        INTERNAL_CODE(err) << "; Failed to check if socket exists";
         return false;
     }
 
@@ -192,7 +192,7 @@ bool TRY_SETUP_THIS_PROGRAM_SOCKET()
     {
         if(::unlink(LOG_SOCKET.c_str()) != 0)
         {
-            XLOG_INTERNAL_FE("{0}; Failed to unlink socket");
+            INTERNAL_ERRNO() << "; Failed to unlink socket";
             return false;
         }
     }
