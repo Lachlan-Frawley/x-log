@@ -1,36 +1,54 @@
-# XLog
+# XLOG
 I wrote xlog as a simple and extendable logging mechanism for a long forgotten project, but since then I have been copying the source files to other projects, making small and incremental improvements, tweaks, and so on. Eventually I decided it'd be easier to do a big cleanup and move it into a nice git repository so I can easily use it anywhere!
 
 # Requirements
+All versions listed below are the minimum versions I've tested with; it is entirely possible that earlier versions will work.
 - C++ 17 at minimum
-- C++ 20 enables using ```std::string```, ```std::string_view```, and ```char*``` as keys to query the logger map
-- Source location is enabled if present and enabled (C++ >=20)
-- Boost Log v2 (not sure how early a version you can get away with, minimum I've tried is 1.72)
-- libfmt
-- Protobuf & gRPC (if external log control is enabled)
+    - C++ 20 enables using ```std::string```, ```std::string_view```, and ```char*``` as keys to query the logger map
+    - Source location is enabled if present and enabled (C++ >=20)
+- Boost (>= 1.7.2)
+    - Log v2
+- libfmt (>= 9.1.0)
+    - https://github.com/fmtlib/fmt
 
-# Notes
-- Logs to std::clog
-- Can be used in a multi-threaded environment
-- Has its own exception that writes to the log (and includes source location)
-- Not tested in an exception-less environment
+# Conditional Requirements
+## External Log Control
+- Protobuf (>= 3.19.4)
+    - https://github.com/protocolbuffers/protobuf
+- gRPC (>= 1.45.2)
+    - https://github.com/grpc/grpc
+- CLI11 (Command line parser) (>= 2.3.0)
+    - https://github.com/CLIUtils/CLI11
+- cli (Interactive command line interface) (>= 2.0.2)
+    - https://github.com/daniele77/cli
+## Journal Logging
+- libsystemd-dev
+    - ```apt install libsystemd-dev```
 
 # CMake Default Options
+- ```-DENABLE_INTERNAL_LOGGING=OFF```, when enabled, will print ```INTERNAL``` level logs to all sinks
 - ```-DENABLE_EXTERNAL_LOG_CONTROL=OFF```, when set to ```ON```, enables external log management (requires gRPC, Protobuf)
 - ```-DUSE_SOURCE_LOCATION=ON```, If C++20 support is available, this enables logging source location for some log lines
+- ```-DUSE_SYSLOG_LOG=OFF```, Enable logging to syslog
+- ```-DUSE_JOURNAL_LOG=OFF```, Enable logging to journald
+- ```-DBUILD_TEST_PROGRAM=ON```, Build a simple test program to verify some functionality of xlog
 
-# Features I want to add
+# Notes
+- Not tested in an exception-less environment
+- Not really tested at all to be honest (except in my rather narrow use-cases)
+
+# Things I want to do
+- Rename namespace to 'xlog'
+- Change macros to not conflict with other macros (probably by prefixing them with ```XLOG```)
 - Normal log macros that use string formatting rather than streams
 - Code/Errno macros that use formatting rather than streams
-- Log to syslog or journal
 - Log to files
 - Add instance loggers (i.e. named instances)
-- Allow adding and removing log sinks via external management
-- Add checks for exceptions and handle FATAL() macros differently if they are disabled
-- Expand CODE_SEV(code) macros to give more information
-- Expand ERRNO_SEV() macros to give more information
+- Allow log streams to be viewable in the external management tool
+- Allow adding and removing log sinks via external management (or at least disabling/enabling?)
+- Add checks for exceptions and handle exception macros differently if they are disabled
 - Test in more environments
-- Automated testing
+- Automated testing & building
 
 # How to use
 Pretty much all of the logging macros look for a special named variable which is filled in by the ```GET_LOGGER(name)``` macro. This macro is meant to be used in a source file, but can be used in other places (i.e. functions), but this can lead to some interesting behaviour, so just put it in your source file for now (there are other mechanisms to log without using this macro).
@@ -46,7 +64,7 @@ WARNING2,
 ERROR,
 ERROR2,
 FATAL,
-INTERNAL    // Used by xlog as the internal log level (can never be disabled)
+INTERNAL    // Used by xlog as the internal log level (can never be disabled, except at build time)
 ```
 Log levels with a '2' in their name will not log source location (with the exception of INFO, which never logs source locations). The source location sent to the log is stripped down slightly, only showing the offending function, file (path stripped), and line number.
 

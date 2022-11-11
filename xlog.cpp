@@ -203,7 +203,7 @@ void XLog::InitializeLogging(LogSettings settings)
         {
             if(!LOGGER_SETTINGS.s_external_control.enabled)
             {
-                INTERNAL() << "xlog external control is not enabled, aborting setup";\
+                INTERNAL() << "xlog external control is not enabled, aborting setup";
                 XLOG_EXTERNAL_CONTROL_SUCCESS = true;
                 break;
             }

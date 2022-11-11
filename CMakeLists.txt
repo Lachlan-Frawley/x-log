@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
-project(xlog VERSION 0.3.0 LANGUAGES CXX)
+project(xlog VERSION 0.3.1 LANGUAGES CXX)
+
+option(ENABLE_INTERNAL_LOGGING "Enable internal logging, potentially useful to diagnose issues with xlog" OFF)
+if(ENABLE_INTERNAL_LOGGING)
+	add_compile_definitions(XLOG_ENABLE_INTERNAL_LOGGING)
+endif(ENABLE_INTERNAL_LOGGING)
 
 option(ENABLE_EXTERNAL_LOG_CONTROL "Allow external programs to manage runtime logging by connecting to a Unix socket" OFF)
 option(USE_SOURCE_LOCATION "If available, include source location in some logging commands" ON)
