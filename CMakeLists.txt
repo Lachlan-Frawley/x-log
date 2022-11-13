@@ -58,7 +58,7 @@ set(LIBRARIES
 
 set(LIB_SOURCE_FILES xlog.cpp)
 set(TEST_PROG_SOURCE_FILES test_program.cpp)
-set(GTEST_SOURCE_FILES xlog_gtest.cpp)
+set(GTEST_SOURCE_FILES xlog_gtest.cpp xlog_test_backend.cpp)
 set(MACRO_GEN_SOURCE_FILES xlog_macro_gen.cpp)
 
 set(EXPORT_HEADERS xlog.h)

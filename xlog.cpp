@@ -34,9 +34,14 @@ static boost::log::sinks::syslog::custom_severity_mapping<xlog::Severity> SYSLOG
 static boost::shared_ptr<boost::log::sinks::synchronous_sink<xlog_journal_backend>> JOURNAL_BACKEND_PTR;
 #endif // XLOG_USE_JOURNAL_LOG
 
-#ifdef XLOG_USE_SIGCPP
-#include <sigcpp/sig.h>
-#endif
+#ifdef XLOG_USE_TEST_BACKENDS
+#include "xlog_test_backend.internal.h"
+static xlog_test_backend_ptr TEST_BACKEND_PTR;
+xlog_test_backend_ptr get_test_backend()
+{
+    return TEST_BACKEND_PTR;
+}
+#endif // XLOG_USE_TEST_BACKENDS
 
 #include "xlog_log_internal.noexport.h"
 
@@ -142,6 +147,26 @@ xlog::LoggerType& xlog::GetNamedLogger(const std::string_view cnl) noexcept
     }
 }
 
+#ifdef XLOG_USE_TEST_BACKENDS
+void xlog::InitializeLogging(LogSettings settings)
+{
+    static bool isInitialized = false;
+
+    if(!isInitialized)
+    {
+        isInitialized = true;
+
+#ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
+        boost::log::core::get()->add_global_attribute("SourceLocation", boost::log::attributes::mutable_constant<std::source_location>(std::source_location::current()));
+#endif
+        boost::log::add_common_attributes();
+
+        TEST_BACKEND_PTR = boost::shared_ptr<boost::log::sinks::synchronous_sink<xlog_test_backend>>(new boost::log::sinks::synchronous_sink<xlog_test_backend>);
+
+        boost::log::core::get()->add_sink(TEST_BACKEND_PTR);
+    }
+}
+#else
 void xlog::InitializeLogging(LogSettings settings)
 {
     static bool isInitialized = false;
@@ -182,15 +207,6 @@ void xlog::InitializeLogging(LogSettings settings)
         {
             XLOG_INTERNAL << "Failed to set atexit() for xlog";
         }
-
-#ifdef XLOG_USE_SIGCPP
-        sig::push_signal_handler(xlog::ShutownLogging, { sig::FATAL_SIGNALS.begin(), sig::FATAL_SIGNALS.end() });
-        if(LOGGER_SETTINGS.s_signal.initialize_in_xlog)
-        {
-            sig::initialize();
-            XLOG_INTERNAL << "Sigcpp initialized";
-        }
-#endif
 
 #ifdef XLOG_USE_SYSLOG_LOG
     #ifdef BOOST_LOG_USE_NATIVE_SYSLOG
@@ -280,6 +296,7 @@ void xlog::InitializeLogging(LogSettings settings)
 #endif // XLOG_ENABLE_EXTERNAL_LOG_CONTROL
     }
 }
+#endif // XLOG_USE_TEST_BACKENDS
 
 void xlog::ShutownLogging(int signal)
 {

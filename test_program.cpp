@@ -61,12 +61,6 @@ int main(int argc, char** argv)
             .enabled = true
         },
 #endif // XLOG_USE_JOURNAL_LOG
-#ifdef XLOG_USE_SIGCPP
-        .s_signal =
-        {
-            .initialize_in_xlog = true
-        }
-#endif // XLOG_USE_SIGCPP
     };
 
     xlog::InitializeLogging(settings);

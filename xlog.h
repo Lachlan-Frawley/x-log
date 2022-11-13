@@ -24,7 +24,7 @@
 #define XLOG_FORMATTER_SELECT(fmat, ...) BOOST_PP_VA_OPT((XLOG_FORMATTER_DEFAULT(fmat, __VA_ARGS__)),(XLOG_FORMATTER_NOARG(fmat)),__VA_ARGS__)
 #define XLOG_FORMATTER_SELECT1(fmat, arg1, ...) BOOST_PP_VA_OPT((XLOG_FORMATTER_DEFAULT(fmat, arg1, __VA_ARGS__)),(XLOG_FORMATTER_DEFAULT(fmat, arg1)),__VA_ARGS__)
 #else
-
+#define XLOG_FORMATTER_DEFAULT(...) fmt::format(__VA_ARGS__)
 #endif // XLOG_USE_BOOST_PP_VARIADIC
 
 #ifdef XLOG_USE_SOURCE_LOCATION_IF_AVAILABLE
@@ -86,21 +86,6 @@ namespace xlog
 
 #endif // XLOG_USE_JOURNAL_LOG
 
-#ifdef XLOG_USE_SIGCPP
-
-namespace xlog
-{
-    struct SignalSettings
-    {
-        // Should xlog initialize sigcpp itself?
-        // This makes the most sense if you include it as a convenient dependency, and not for your own use
-        // Additionally, sigcpp will be initialized with its default settings
-        bool initialize_in_xlog = true;
-    };
-}
-
-#endif // XLOG_USE_SIGCPP
-
 namespace xlog
 {
     /*
@@ -157,9 +142,6 @@ namespace xlog
 #ifdef XLOG_USE_JOURNAL_LOG
         JournalSettings s_journal;
 #endif // XLOG_USE_JOURNAL_LOG
-#ifdef XLOG_USE_SIGCPP
-        SignalSettings s_signal;
-#endif // XLOG_USE_SIGCPP
     };
 
     typedef boost::log::sources::severity_channel_logger_mt<Severity, std::string> LoggerType;
@@ -180,7 +162,7 @@ namespace xlog
     std::vector<std::string> GetAllLogHandles();
 
     template<class First, class... FmtArgs>
-    std::string format(First&& first, fmt::format_string<FmtArgs...> format, FmtArgs&&... args)
+    inline auto format(First&& first, fmt::format_string<FmtArgs...> format, FmtArgs&&... args) -> std::string
     {
         return fmt::format(format, first, args...);
     }
