@@ -6,9 +6,7 @@ option(USE_SOURCE_LOCATION "If available, include source location in some loggin
 option(USE_SYSLOG_LOG "Enable logging using syslog" OFF)
 option(USE_JOURNAL_LOG "Enable logging using journald" OFF)
 
-option(BUILD_TEST_PROGRAM "Build testing program" ON)
-option(FORCE_CXX_17 "Force the use of C++ 17" OFF)
-option(BUILD_MACRO_GENERATOR "Build the macro generator" OFF)
+option(BUILD_TESTS "Build tests and test program" OFF)
 
 set(SET_OPTS)
 
@@ -42,13 +40,8 @@ endif(USE_JOURNAL_LOG)
 
 set(CMAKE_CXX_STANDARD 17)
 if("cxx_std_20" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-	if(FORCE_CXX_17)
-		message("Forcing C++17 support! (Even though C++20 is supported)")
-		set(CMAKE_CXX_STANDARD_REQUIRED ON)
-	else()
-		message("C++ 20 support detected")
-		set(CMAKE_CXX_STANDARD 20)
-	endif()
+	message("C++ 20 support detected")
+	set(CMAKE_CXX_STANDARD 20)
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -64,7 +57,9 @@ set(LIBRARIES
 )
 
 set(LIB_SOURCE_FILES xlog.cpp)
-set(TEST_SOURCE_FILES test_program.cpp)
+set(TEST_PROG_SOURCE_FILES test_program.cpp)
+set(GTEST_SOURCE_FILES xlog_gtest.cpp)
+set(MACRO_GEN_SOURCE_FILES xlog_macro_gen.cpp)
 
 set(EXPORT_HEADERS xlog.h)
 
@@ -72,6 +67,10 @@ if(USE_JOURNAL_LOG)
 	set(LIB_SOURCE_FILES ${LIB_SOURCE_FILES} xlog_journal.cpp)
 	set(LIBRARIES ${LIBRARIES} systemd)
 endif(USE_JOURNAL_LOG)
+
+if(BUILD_TESTS)
+	find_package(GTest REQUIRED)
+endif(BUILD_TESTS)
 
 if(ENABLE_EXTERNAL_LOG_CONTROL)
 	find_package(Protobuf REQUIRED)
@@ -89,8 +88,8 @@ if(ENABLE_EXTERNAL_LOG_CONTROL)
 		${ProtoSources}
 		${ProtoGRPCSources})
 
-	set(TEST_SOURCE_FILES
-		${TEST_SOURCE_FILES}
+	set(TEST_PROG_SOURCE_FILES
+		${TEST_PROG_SOURCE_FILES}
 		${ProtoSources}
 		${ProtoGRPCSources})
 
@@ -112,18 +111,27 @@ target_link_libraries(xlog-shared PUBLIC ${LIBRARIES})
 add_library(xlog STATIC ${LIB_SOURCE_FILES})
 target_link_libraries(xlog PUBLIC ${LIBRARIES})
 
-if(BUILD_TEST_PROGRAM)
-	add_executable(xlog-test ${TEST_SOURCE_FILES})
-	target_link_libraries(xlog-test PUBLIC xlog)
-endif(BUILD_TEST_PROGRAM)
+if(BUILD_TESTS)
+	add_executable(xlog-test-prog ${TEST_PROG_SOURCE_FILES})
+	target_link_libraries(xlog-test-prog PUBLIC xlog)
+
+	add_library(xlog-test-lib STATIC ${LIB_SOURCE_FILES})
+	target_link_libraries(xlog-test-lib PUBLIC ${LIBRARIES})
+	target_compile_definitions(xlog-test-lib PRIVATE XLOG_USE_TEST_BACKENDS)
+
+	add_executable(xlog-gtest ${GTEST_SOURCE_FILES})
+	target_link_libraries(xlog-gtest PUBLIC GTest::GTest xlog-test-lib)
+
+	add_executable(xlog-macro-gen ${MACRO_GEN_SOURCE_FILES})
+endif(BUILD_TESTS)
 
 if(ENABLE_EXTERNAL_LOG_CONTROL)
 	target_include_directories(xlog-shared PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 	target_include_directories(xlog PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-	if(BUILD_TEST_PROGRAM)
-		target_include_directories(xlog-test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-	endif(BUILD_TEST_PROGRAM)
+	if(BUILD_TESTS)
+		target_include_directories(xlog-test-prog PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+	endif(BUILD_TESTS)
 
 	find_package(cli REQUIRED)
 	find_package(CLI11 REQUIRED)
