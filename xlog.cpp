@@ -480,6 +480,19 @@ void xlog::formatters::default_formatter(const boost::log::record_view& rec, boo
     stream << message.get();
 }
 
+#ifdef XLOG_USE_TEST_BACKENDS
+static std::string XLOG_ERRNO_TEST_STRING{};
+
+void xlog_set_errno_test_string(std::string value)
+{
+    XLOG_ERRNO_TEST_STRING = std::move(value);
+}
+
+std::string xlog::get_errno_string()
+{
+    return std::exchange(XLOG_ERRNO_TEST_STRING, {});
+}
+#else
 std::string xlog::get_errno_string()
 {
     // TODO - Find out max length?
@@ -490,3 +503,4 @@ std::string xlog::get_errno_string()
 
     return { realBuffer };
 }
+#endif // XLOG_USE_TEST_BACKENDS

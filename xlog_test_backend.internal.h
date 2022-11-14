@@ -46,3 +46,4 @@ private:
 typedef boost::shared_ptr<boost::log::sinks::synchronous_sink<xlog_test_backend>> xlog_test_backend_ptr;
 
 extern xlog_test_backend_ptr get_test_backend();
+extern void xlog_set_errno_test_string(std::string value);

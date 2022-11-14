@@ -1,6 +1,7 @@
 #include "xlog_test_utils.h"
 
 #include <array>
+#include <regex>
 
 namespace xlog_test::rng
 {
@@ -47,5 +48,18 @@ namespace xlog_test::rng
         }
 
         return str;
+    }
+
+    std::string make_random_string_safe(size_t length)
+    {
+        return make_random_string_safe(length, length);
+    }
+
+    std::string make_random_string_safe(size_t min_length, size_t max_length)
+    {
+        auto result = make_random_string(min_length, max_length);
+        result = std::regex_replace(result, std::regex(R"(\0)"), "a");      
+
+        return result;
     }
 }

@@ -10,6 +10,8 @@
 
 #include <cstdlib>
 
+#include <system_error>
+
 // Check if a timestamp is within a reasonable range (range in milliseconds)
 // Based on: https://stackoverflow.com/a/39003411
 
@@ -58,9 +60,16 @@ XLOG_GET_LOGGER("test")
 
 constexpr size_t MIN_RANDOM_STRING_LENGTH = 32;
 constexpr size_t MAX_RANDOM_STRING_LENGTH = 256;
+
+// Make a random string with some arbitrary characters in it
 #define MAKE_RANDOM_STRING() xlog_test::rng::make_random_string(MIN_RANDOM_STRING_LENGTH, MAX_RANDOM_STRING_LENGTH)
 
+// Make a random string with some arbitrary characters in it, but will not have any null terminators present
+#define MAKE_RANDOM_STRING_SAFE() xlog_test::rng::make_random_string_safe(MIN_RANDOM_STRING_LENGTH, MAX_RANDOM_STRING_LENGTH)
+
 constexpr size_t TEST_ITERATIONS = 100;
+
+#define MAKE_RANDOM_ERRC() std::make_error_code(std::errc::permission_denied)
 
 #define XLOG_TEST_BOILERPLATE_A(record_varname) auto output = G_BACKEND->locked_backend()->pop_record(); \
 EXPECT_TRUE(output.has_value()) << "No value present in test backend"; \
@@ -100,6 +109,34 @@ EXPECT_TRUE(TimestampInTwoWayRange(record_varname.m_timestamp, timestamp_range_u
         XLOG_TEST_BOILERPLATE_A(record)                                          \
         XLOG_TEST_BOILERPLAT_B0(record, XLOG_LOGGER_VAR_NAME.channel(), XLOG_LEVEL2SEV(level), random_string, 500) \
     }                                                                            \
+}                                                                                \
+TEST(Formatted, ErrorCodeNoArgsFormat ## level)                                  \
+{                                                                                \
+    auto fmt_string = "Got an error during operations: '{0}'";                   \
+                                                                                 \
+    for(auto XLOG_TEST_ITR = 0; XLOG_TEST_ITR < TEST_ITERATIONS; ++XLOG_TEST_ITR)\
+    {                                                                            \
+        auto code = MAKE_RANDOM_ERRC();                                          \
+        auto expected_output = fmt::format(fmt_string, XLOG_ERRC_VALUE(code));   \
+        XLOG_ ## level ## _FC(code, fmt_string);                                 \
+        XLOG_TEST_BOILERPLATE_A(record)                                          \
+        XLOG_TEST_BOILERPLAT_B0(record, XLOG_LOGGER_VAR_NAME.channel(), XLOG_LEVEL2SEV(level), expected_output, 500) \
+    }                                                                            \
+} \
+TEST(Formatted, ErrnoNoArgsFormat ## level) \
+{ \
+    auto fmt_string = "Got an error during operations: '{0}'"; \
+ \
+    for(auto XLOG_TEST_ITR = 0; XLOG_TEST_ITR < TEST_ITERATIONS; ++XLOG_TEST_ITR) \
+    { \
+        auto rstrErrno = MAKE_RANDOM_STRING(); \
+        xlog_set_errno_test_string(rstrErrno); \
+        auto expected_output = fmt::format(fmt_string, rstrErrno); \
+ \
+        XLOG_ ## level ## _FE(fmt_string); \
+        XLOG_TEST_BOILERPLATE_A(record) \
+        XLOG_TEST_BOILERPLAT_B0(record, XLOG_LOGGER_VAR_NAME.channel(), XLOG_LEVEL2SEV(level), expected_output, 500) \
+    } \
 }
 
 #define XLOG_TEST_FORMATTED_FMTARGS(level) TEST(Formatted, ArgsFormat ## level)  \
@@ -117,8 +154,38 @@ EXPECT_TRUE(TimestampInTwoWayRange(record_varname.m_timestamp, timestamp_range_u
         XLOG_TEST_BOILERPLATE_A(record)                                          \
         XLOG_TEST_BOILERPLAT_B0(record, XLOG_LOGGER_VAR_NAME.channel(), XLOG_LEVEL2SEV(level), expected_output, 500) \
     }                                                                            \
+}                                                                                \
+TEST(Formatted, ErrorCodeArgsFormat ## level)                                    \
+{                                                                                \
+    auto fmt_string = "{0}; Got an error during operations: '{1}'";              \
+                                                                                 \
+    for(auto XLOG_TEST_ITR = 0; XLOG_TEST_ITR < TEST_ITERATIONS; ++XLOG_TEST_ITR)\
+    {                                                                            \
+        auto code = MAKE_RANDOM_ERRC();                                          \
+        auto rstrA = MAKE_RANDOM_STRING();                                       \
+        auto expected_output = fmt::format(fmt_string, XLOG_ERRC_VALUE(code), rstrA);                                \
+                                                                                 \
+        XLOG_ ## level ## _FC(code, fmt_string, rstrA);                                   \
+        XLOG_TEST_BOILERPLATE_A(record)                                          \
+        XLOG_TEST_BOILERPLAT_B0(record, XLOG_LOGGER_VAR_NAME.channel(), XLOG_LEVEL2SEV(level), expected_output, 500)  \
+    }                                                                            \
+} \
+TEST(Formatted, ErrnoArgsFormat ## level) \
+{ \
+    auto fmt_string = "{0}; Got an error during operations: '{1}'"; \
+ \
+    for(auto XLOG_TEST_ITR = 0; XLOG_TEST_ITR < TEST_ITERATIONS; ++XLOG_TEST_ITR) \
+    { \
+        auto rstrErrno = MAKE_RANDOM_STRING(); \
+        xlog_set_errno_test_string(rstrErrno); \
+        auto rstrA = MAKE_RANDOM_STRING(); \
+        auto expected_output = fmt::format(fmt_string, rstrErrno, rstrA); \
+ \
+        XLOG_ ## level ## _FE(fmt_string, rstrA); \
+        XLOG_TEST_BOILERPLATE_A(record) \
+        XLOG_TEST_BOILERPLAT_B0(record, XLOG_LOGGER_VAR_NAME.channel(), XLOG_LEVEL2SEV(level), expected_output, 500) \
+    } \
 }
-
 
 XLOG_TEST_FORMATTED_NOARGS(INFO)
 XLOG_TEST_FORMATTED_NOARGS(DEBUG)
@@ -136,6 +203,16 @@ XLOG_TEST_FORMATTED_FMTARGS(WARN2)
 XLOG_TEST_FORMATTED_FMTARGS(ERROR)
 XLOG_TEST_FORMATTED_FMTARGS(ERROR2)
 
+#include "xlog_gtest_fatal.h"
+
+TEST(Invariants, EnsureNoMissedLogs)
+{
+    auto consumed_count = G_BACKEND->locked_backend()->consumed_count();
+    auto popped_count = G_BACKEND->locked_backend()->popped_count();
+
+    EXPECT_EQ(consumed_count, popped_count);
+}
+
 int main(int argc, char** argv)
 {
     xlog::InitializeLogging();
@@ -143,13 +220,6 @@ int main(int argc, char** argv)
 
     ::testing::InitGoogleTest(&argc, argv);
     auto rv = RUN_ALL_TESTS();
-
-    auto consumed_count = G_BACKEND->locked_backend()->consumed_count();
-    auto popped_count = G_BACKEND->locked_backend()->popped_count();
-
-    std::cout
-        << "Consumed " << consumed_count << " records" << std::endl
-        << "Popped " << popped_count << " records" << std::endl;
 
     return rv;
 }

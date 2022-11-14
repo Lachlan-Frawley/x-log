@@ -25,6 +25,7 @@
 #define XLOG_FORMATTER_SELECT1(fmat, arg1, ...) BOOST_PP_VA_OPT((XLOG_FORMATTER_DEFAULT(fmat, arg1, __VA_ARGS__)),(XLOG_FORMATTER_DEFAULT(fmat, arg1)),__VA_ARGS__)
 #else
 #define XLOG_FORMATTER_DEFAULT(...) fmt::format(__VA_ARGS__)
+#define XLOG_FORMATTER_REORDER(first, ...) xlog::format(first, __VA_ARGS__)
 #endif // XLOG_USE_BOOST_PP_VARIADIC
 
 #ifdef XLOG_USE_SOURCE_LOCATION_IF_AVAILABLE
@@ -391,12 +392,13 @@ namespace xlog
 }
 
 #define XLOG_FATAL_ERRC_VALUE(errc) errc.message()
-#define XLOG_FATAL_ERRNO_VALUE get_errno_string()
+#define XLOG_FATAL_ERRNO_VALUE xlog::get_errno_string()
+#define XLOG_GLOBAL_NAME "Global"
 
 // Fatal exceptions
 
-#define XLOG_FATAL(msg) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, msg);
-#define XLOG_FATAL_G(msg) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), msg)
+#define XLOG_FATAL(msg) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, msg)
+#define XLOG_FATAL_G(msg) throw xlog::fatal_exception(xlog::GetNamedLogger(XLOG_GLOBAL_NAME), msg)
 
 #define XLOG_FATAL_C(errc) XLOG_FATAL(XLOG_FATAL_ERRC_VALUE(errc))
 
@@ -408,25 +410,25 @@ namespace xlog
 #define XLOG_FATAL_FG(fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__))
 
 #define XLOG_FATAL_FC(errc, fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
-#define XLOG_FATAL_FGC(errc, fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
+#define XLOG_FATAL_FGC(errc, fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger(XLOG_GLOBAL_NAME), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
 
 #define XLOG_FATAL_FE(fmat, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
-#define XLOG_FATAL_FGE(fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
+#define XLOG_FATAL_FGE(fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger(XLOG_GLOBAL_NAME), XLOG_FORMATTER_SELECT1(fmat, XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
 #else
 #define XLOG_FATAL_F(...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_DEFAULT(__VA_ARGS__))
-#define XLOG_FATAL_FG(...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_DEFAULT(__VA_ARGS__))
+#define XLOG_FATAL_FG(...) throw xlog::fatal_exception(xlog::GetNamedLogger(XLOG_GLOBAL_NAME), XLOG_FORMATTER_DEFAULT(__VA_ARGS__))
 
-#define XLOG_FATAL_FC(errc, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_DEFAULT(XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
-#define XLOG_FATAL_FGC(errc, ...) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), XLOG_FORMATTER_DEFAULT(XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
+#define XLOG_FATAL_FC(errc, ...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_REORDER(XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
+#define XLOG_FATAL_FGC(errc, ...) throw xlog::fatal_exception(xlog::GetNamedLogger(XLOG_GLOBAL_NAME), XLOG_FORMATTER_REORDER(XLOG_FATAL_ERRC_VALUE(errc), __VA_ARGS__))
 
-#define XLOG_FATAL_FE(...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_SELECT1(XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
-#define XLOG_FATAL_FGE(...) throw xlog::fatal_exception(xlog::GetNamedLogger("Global"), XLOG_FORMATTER_SELECT1(XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
+#define XLOG_FATAL_FE(...) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, XLOG_FORMATTER_REORDER(XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
+#define XLOG_FATAL_FGE(...) throw xlog::fatal_exception(xlog::GetNamedLogger(XLOG_GLOBAL_NAME), XLOG_FORMATTER_REORDER(XLOG_FATAL_ERRNO_VALUE, __VA_ARGS__))
 #endif
 
 
 // Named Fatal Exceptions
 /*
-#define XLOG_FATAL_I(name, msg) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, msg);
+#define XLOG_FATAL_I(name, msg) throw xlog::fatal_exception(XLOG_LOGGER_VAR_NAME, msg)
 #define XLOG_FATAL_IF(name, fmat, ...) throw xlog::fatal_exception(xlog::GetNamedLogger(name), XLOG_FORMATTER_SELECT(fmat, __VA_ARGS__))
 
 #define XLOG_FATAL_IC(name, errc) XLOG_FATAL_I(XLOG_FATAL_ERRC_VALUE(errc))

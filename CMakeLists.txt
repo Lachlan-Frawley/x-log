@@ -39,10 +39,11 @@ set(XLOG_USE_JOURNAL_LOG ON)")
 endif(USE_JOURNAL_LOG)
 
 set(CMAKE_CXX_STANDARD 17)
-if("cxx_std_20" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-	message("C++ 20 support detected")
-	set(CMAKE_CXX_STANDARD 20)
-endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#if("cxx_std_20" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+#	message("C++ 20 support detected")
+#	set(CMAKE_CXX_STANDARD 20)
+#endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 

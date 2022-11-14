@@ -15,6 +15,9 @@ namespace xlog_test
         std::string make_random_string(size_t length);
         std::string make_random_string(size_t min_length, size_t max_length);
 
+        std::string make_random_string_safe(size_t length);
+        std::string make_random_string_safe(size_t min_length, size_t max_length);
+
         template<class T>
         T get(T min, T max)
         {
