@@ -4,6 +4,7 @@
 #include <string>
 #include <random>
 #include <limits>
+#include <system_error>
 
 namespace xlog_test
 {
@@ -17,6 +18,8 @@ namespace xlog_test
 
         std::string make_random_string_safe(size_t length);
         std::string make_random_string_safe(size_t min_length, size_t max_length);
+
+        std::errc get_random_error();
 
         template<class T>
         T get(T min, T max)

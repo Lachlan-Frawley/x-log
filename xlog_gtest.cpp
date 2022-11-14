@@ -10,8 +10,6 @@
 
 #include <cstdlib>
 
-#include <system_error>
-
 // Check if a timestamp is within a reasonable range (range in milliseconds)
 // Based on: https://stackoverflow.com/a/39003411
 
@@ -69,7 +67,7 @@ constexpr size_t MAX_RANDOM_STRING_LENGTH = 256;
 
 constexpr size_t TEST_ITERATIONS = 100;
 
-#define MAKE_RANDOM_ERRC() std::make_error_code(std::errc::permission_denied)
+#define MAKE_RANDOM_ERRC() std::make_error_code(xlog_test::rng::get_random_error())
 
 #define XLOG_TEST_BOILERPLATE_A(record_varname) auto output = G_BACKEND->locked_backend()->pop_record(); \
 EXPECT_TRUE(output.has_value()) << "No value present in test backend"; \

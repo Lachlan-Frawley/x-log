@@ -3,6 +3,8 @@
 #include <array>
 #include <regex>
 
+#include <magic_enum.hpp>
+
 namespace xlog_test::rng
 {
     constexpr std::array VALID_STRING_CHARACTERS =
@@ -61,5 +63,13 @@ namespace xlog_test::rng
         result = std::regex_replace(result, std::regex(R"(\0)"), "a");      
 
         return result;
+    }
+
+    std::errc get_random_error()
+    {
+        constexpr static auto ALL_ERRC = magic_enum::enum_entries<std::errc>();
+
+        auto idx = get<size_t>(0, ALL_ERRC.size());
+        return ALL_ERRC[idx].first;
     }
 }

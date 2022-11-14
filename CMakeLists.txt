@@ -71,6 +71,7 @@ endif(USE_JOURNAL_LOG)
 
 if(BUILD_TESTS)
 	find_package(GTest REQUIRED)
+	find_package(magic_enum CONFIG REQUIRED)
 endif(BUILD_TESTS)
 
 if(ENABLE_EXTERNAL_LOG_CONTROL)
@@ -121,7 +122,7 @@ if(BUILD_TESTS)
 	target_compile_definitions(xlog-test-lib PRIVATE XLOG_USE_TEST_BACKENDS)
 
 	add_executable(xlog-gtest ${GTEST_SOURCE_FILES})
-	target_link_libraries(xlog-gtest PUBLIC GTest::GTest xlog-test-lib)
+	target_link_libraries(xlog-gtest PUBLIC GTest::GTest magic_enum::magic_enum xlog-test-lib)
 
 	add_executable(xlog-macro-gen ${MACRO_GEN_SOURCE_FILES})
 endif(BUILD_TESTS)
