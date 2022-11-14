@@ -156,6 +156,11 @@ void xlog::InitializeLogging(LogSettings settings)
     {
         isInitialized = true;
 
+        LOGGER_SETTINGS = settings;
+        {
+            DefaultSeverity.store(LOGGER_SETTINGS.s_default_level);
+        }
+
 #ifdef XLOG_LOGGING_USE_SOURCE_LOCATION
         boost::log::core::get()->add_global_attribute("SourceLocation", boost::log::attributes::mutable_constant<std::source_location>(std::source_location::current()));
 #endif
@@ -473,4 +478,15 @@ void xlog::formatters::default_formatter(const boost::log::record_view& rec, boo
     }
 #endif
     stream << message.get();
+}
+
+std::string xlog::get_errno_string()
+{
+    // TODO - Find out max length?
+    constexpr int BUFFER_SIZE = 256;
+
+    char buffer[BUFFER_SIZE];
+    char* realBuffer = ::strerror_r(errno, buffer, BUFFER_SIZE - 1);
+
+    return { realBuffer };
 }

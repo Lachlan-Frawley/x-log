@@ -4,6 +4,8 @@
 
 void xlog_test_backend::consume(const boost::log::record_view& rec)
 {
+    m_consumed++;
+
     auto timestamp = boost::log::extract<boost::posix_time::ptime>("TimeStamp", rec);
     auto sev = boost::log::extract<xlog::Severity>("Severity", rec);
     auto cnl = boost::log::extract<std::string>("Channel", rec);
@@ -20,15 +22,17 @@ void xlog_test_backend::consume(const boost::log::record_view& rec)
             .m_error = "TODO"
         });
     }
-
-    m_records.emplace(LogRecordData{
-        .m_timestamp = timestamp.get(),
-        .m_severity = sev.get(),
-        .m_channel = cnl.get(),
-        .m_message = message.get(),
-        .m_valid = true,
-        .m_error = {}
-    });
+    else
+    {
+        m_records.emplace(LogRecordData{
+            .m_timestamp = timestamp.get(),
+            .m_severity = sev.get(),
+            .m_channel = cnl.get(),
+            .m_message = message.get(),
+            .m_valid = true,
+            .m_error = {}
+        });
+    }
 }
 
 std::optional<LogRecordData> xlog_test_backend::pop_record()
@@ -40,5 +44,17 @@ std::optional<LogRecordData> xlog_test_backend::pop_record()
 
     LogRecordData data = m_records.front();
     m_records.pop();
+
+    m_popped++;
     return data;
+}
+
+int xlog_test_backend::consumed_count() const
+{
+    return m_consumed.load();
+}
+
+int xlog_test_backend::popped_count() const
+{
+    return m_popped.load();
 }

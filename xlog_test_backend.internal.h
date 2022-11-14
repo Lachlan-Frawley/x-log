@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queue>
+#include <atomic>
 #include <optional>
 
 #include <string>
@@ -32,8 +33,13 @@ public:
 
     std::optional<LogRecordData> pop_record();
 
+    int consumed_count() const;
+    int popped_count() const;
+
 private:
     std::queue<LogRecordData> m_records;
+    std::atomic_int m_consumed;
+    std::atomic_int m_popped;
 };
 
 #include <boost/log/sinks/sync_frontend.hpp>

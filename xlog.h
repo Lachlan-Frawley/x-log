@@ -196,18 +196,12 @@ ValueType set_get_attrib(const char* name, ValueType value) {
 
 #define XLOG_ERRC_VALUE(errc) errc.message()
 
-inline std::string xlog_get_errno_string()
+namespace xlog
 {
-    // TODO - Find out max length?
-    constexpr int BUFFER_SIZE = 256;
-
-    char buffer[BUFFER_SIZE];
-    char* realBuffer = ::strerror_r(errno, buffer, BUFFER_SIZE - 1);
-
-    return { realBuffer };
+    std::string get_errno_string();
 }
 
-#define XLOG_ERRNO_VALUE xlog_get_errno_string()
+#define XLOG_ERRNO_VALUE xlog::get_errno_string()
 
 
 // Normal Stream Macros
