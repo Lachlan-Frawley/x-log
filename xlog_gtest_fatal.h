@@ -1,4 +1,4 @@
-TEST(Exceptions, FatalNoQualifiers)
+TEST(Exceptions, Fatal)
 {
     for(auto XLOG_TEST_ITR = 0; XLOG_TEST_ITR < TEST_ITERATIONS; ++XLOG_TEST_ITR)
     {
@@ -12,7 +12,7 @@ TEST(Exceptions, FatalNoQualifiers)
         {
             EXPECT_EQ(e.what(), message);
             XLOG_TEST_BOILERPLATE_A(record)
-            XLOG_TEST_BOILERPLAT_B0(record, XLOG_LOGGER_VAR_NAME.channel(), xlog::Severity::FATAL, message, 500)
+            XLOG_TEST_BOILERPLATE_B0(record, XLOG_LOGGER_VAR_NAME.channel(), xlog::Severity::FATAL, message, 500)
         }
         catch(...)
         {
@@ -21,7 +21,7 @@ TEST(Exceptions, FatalNoQualifiers)
     }
 }
 
-TEST(Exceptions, FatalGlobal)
+TEST(Exceptions, Fatal_Global)
 {
     for(auto XLOG_TEST_ITR = 0; XLOG_TEST_ITR < TEST_ITERATIONS; ++XLOG_TEST_ITR)
     {
@@ -35,7 +35,7 @@ TEST(Exceptions, FatalGlobal)
         {
             EXPECT_EQ(e.what(), message);
             XLOG_TEST_BOILERPLATE_A(record)
-            XLOG_TEST_BOILERPLAT_B0(record, XLOG_GLOBAL_NAME, xlog::Severity::FATAL, message, 500)
+            XLOG_TEST_BOILERPLATE_B0(record, XLOG_GLOBAL_NAME, xlog::Severity::FATAL, message, 500)
         }
         catch(...)
         {
@@ -44,7 +44,7 @@ TEST(Exceptions, FatalGlobal)
     }
 }
 
-TEST(Exceptions, FatalErrorCodeNoArgsFormat)
+TEST(Exceptions, Fatal_ErrorCode_NoArgsFormat)
 {
     for(auto XLOG_TEST_ITR = 0; XLOG_TEST_ITR < TEST_ITERATIONS; ++XLOG_TEST_ITR)
     {
@@ -60,7 +60,7 @@ TEST(Exceptions, FatalErrorCodeNoArgsFormat)
         {
             EXPECT_EQ(e.what(), message);
             XLOG_TEST_BOILERPLATE_A(record)
-            XLOG_TEST_BOILERPLAT_B0(record, XLOG_LOGGER_VAR_NAME.channel(), xlog::Severity::FATAL, message, 500)
+            XLOG_TEST_BOILERPLATE_B0(record, XLOG_LOGGER_VAR_NAME.channel(), xlog::Severity::FATAL, message, 500)
         }
         catch(...)
         {
@@ -69,7 +69,7 @@ TEST(Exceptions, FatalErrorCodeNoArgsFormat)
     }
 }
 
-TEST(Exceptions, FatalErrnoNoArgsFormat)
+TEST(Exceptions, Fatal_Errno_NoArgsFormat)
 {
     for(auto XLOG_TEST_ITR = 0; XLOG_TEST_ITR < TEST_ITERATIONS; ++XLOG_TEST_ITR)
     {
@@ -86,7 +86,7 @@ TEST(Exceptions, FatalErrnoNoArgsFormat)
         {
             EXPECT_EQ(e.what(), message);
             XLOG_TEST_BOILERPLATE_A(record)
-            XLOG_TEST_BOILERPLAT_B0(record, XLOG_LOGGER_VAR_NAME.channel(), xlog::Severity::FATAL, message, 500)
+            XLOG_TEST_BOILERPLATE_B0(record, XLOG_LOGGER_VAR_NAME.channel(), xlog::Severity::FATAL, message, 500)
         }
         catch(...)
         {
@@ -95,7 +95,7 @@ TEST(Exceptions, FatalErrnoNoArgsFormat)
     }
 }
 
-TEST(Exceptions, FatalFormat)
+TEST(Exceptions, Fatal_Format)
 {
     auto fmt_string = "I {1} am {0} formatted {2}!";
 
@@ -116,7 +116,7 @@ TEST(Exceptions, FatalFormat)
         {
             EXPECT_EQ(e.what(), expected_output);
             XLOG_TEST_BOILERPLATE_A(record)
-            XLOG_TEST_BOILERPLAT_B0(record, XLOG_LOGGER_VAR_NAME.channel(), xlog::Severity::FATAL, expected_output, 500)
+            XLOG_TEST_BOILERPLATE_B0(record, XLOG_LOGGER_VAR_NAME.channel(), xlog::Severity::FATAL, expected_output, 500)
         }
         catch(...)
         {
@@ -125,7 +125,7 @@ TEST(Exceptions, FatalFormat)
     }
 }
 
-TEST(Exceptions, FatalFormatGlobal)
+TEST(Exceptions, Fatal_Format_Global)
 {
     auto fmt_string = "I {1} am {0} formatted {2}!";
 
@@ -146,7 +146,7 @@ TEST(Exceptions, FatalFormatGlobal)
         {
             EXPECT_EQ(e.what(), expected_output);
             XLOG_TEST_BOILERPLATE_A(record)
-            XLOG_TEST_BOILERPLAT_B0(record, XLOG_GLOBAL_NAME, xlog::Severity::FATAL, expected_output, 500)
+            XLOG_TEST_BOILERPLATE_B0(record, XLOG_GLOBAL_NAME, xlog::Severity::FATAL, expected_output, 500)
         }
         catch(...)
         {
@@ -155,7 +155,7 @@ TEST(Exceptions, FatalFormatGlobal)
     }
 }
 
-TEST(Exceptions, FatalErrorCodeArgsFormat)
+TEST(Exceptions, Fatal_ErrorCode_ArgsFormat)
 {
     auto fmt_string = "I {1} am {0} formatted {2}!";
 
@@ -177,7 +177,7 @@ TEST(Exceptions, FatalErrorCodeArgsFormat)
         {
             EXPECT_EQ(e.what(), expected_output);
             XLOG_TEST_BOILERPLATE_A(record)
-            XLOG_TEST_BOILERPLAT_B0(record, XLOG_LOGGER_VAR_NAME.channel(), xlog::Severity::FATAL, expected_output, 500)
+            XLOG_TEST_BOILERPLATE_B0(record, XLOG_LOGGER_VAR_NAME.channel(), xlog::Severity::FATAL, expected_output, 500)
         }
         catch(...)
         {
@@ -186,7 +186,7 @@ TEST(Exceptions, FatalErrorCodeArgsFormat)
     }
 }
 
-TEST(Exceptions, FatalErrnoArgsFormat)
+TEST(Exceptions, Fatal_ErrnoArgs_Format)
 {
     auto fmt_string = "I {1} am {0} formatted {2}!";
 
@@ -209,7 +209,7 @@ TEST(Exceptions, FatalErrnoArgsFormat)
         {
             EXPECT_EQ(e.what(), expected_output);
             XLOG_TEST_BOILERPLATE_A(record)
-            XLOG_TEST_BOILERPLAT_B0(record, XLOG_LOGGER_VAR_NAME.channel(), xlog::Severity::FATAL, expected_output, 500)
+            XLOG_TEST_BOILERPLATE_B0(record, XLOG_LOGGER_VAR_NAME.channel(), xlog::Severity::FATAL, expected_output, 500)
         }
         catch(...)
         {
@@ -218,7 +218,7 @@ TEST(Exceptions, FatalErrnoArgsFormat)
     }
 }
 
-TEST(Exceptions, FatalErrorCodeArgsFormatGlobal)
+TEST(Exceptions, Fatal_ErrorCode_ArgsFormat_Global)
 {
     auto fmt_string = "I {1} am {0} formatted {2}!";
 
@@ -240,7 +240,7 @@ TEST(Exceptions, FatalErrorCodeArgsFormatGlobal)
         {
             EXPECT_EQ(e.what(), expected_output);
             XLOG_TEST_BOILERPLATE_A(record)
-            XLOG_TEST_BOILERPLAT_B0(record, XLOG_GLOBAL_NAME, xlog::Severity::FATAL, expected_output, 500)
+            XLOG_TEST_BOILERPLATE_B0(record, XLOG_GLOBAL_NAME, xlog::Severity::FATAL, expected_output, 500)
         }
         catch(...)
         {
@@ -249,7 +249,7 @@ TEST(Exceptions, FatalErrorCodeArgsFormatGlobal)
     }
 }
 
-TEST(Exceptions, FatalErrnoArgsFormatGlobal)
+TEST(Exceptions, Fatal_Errno_ArgsFormat_Global)
 {
     auto fmt_string = "I {1} am {0} formatted {2}!";
 
@@ -272,7 +272,7 @@ TEST(Exceptions, FatalErrnoArgsFormatGlobal)
         {
             EXPECT_EQ(e.what(), expected_output);
             XLOG_TEST_BOILERPLATE_A(record)
-            XLOG_TEST_BOILERPLAT_B0(record, XLOG_GLOBAL_NAME, xlog::Severity::FATAL, expected_output, 500)
+            XLOG_TEST_BOILERPLATE_B0(record, XLOG_GLOBAL_NAME, xlog::Severity::FATAL, expected_output, 500)
         }
         catch(...)
         {
